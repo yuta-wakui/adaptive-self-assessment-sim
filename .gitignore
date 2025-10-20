@@ -1,0 +1,70 @@
+# ================================
+# Python / VSCode 基本設定
+# ================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+*.egg-info/
+*.log
+*.DS_Store
+.env
+.venv/
+venv/
+.idea/
+.vscode/
+.ipynb_checkpoints/
+
+# ================================
+# 研究データ関係
+# ================================
+
+# 生データ・加工データ（非公開）
+data/raw/
+data/processed/
+data/real/
+data/private/
+data/tmp/
+
+# 公開してよいのは synthetic のみ
+!data/synthetic/
+!data/README_data.md
+
+# 結果・中間出力
+outputs/
+results/
+logs/
+reports/
+experiments/*/results.json
+
+# モデルファイル（容量・再現性・著作権リスク対策）
+*.pkl
+*.joblib
+*.sav
+*.h5
+*.onnx
+
+# ================================
+# 分析・可視化
+# ================================
+notebooks/*_tmp.ipynb
+notebooks/*_dev.ipynb
+notebooks/.ipynb_checkpoints/
+
+# ================================
+# OS / エディタ / キャッシュ
+# ================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# ================================
+# ビルド・成果物
+# ================================
+dist/
+build/
+*.zip
+*.tar.gz
+*.bak
