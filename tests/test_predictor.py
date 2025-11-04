@@ -1,0 +1,78 @@
+import pandas as pd
+import numpy as np
+import pytest
+
+from adaptive_self_assessment.selector import select_question
+from adaptive_self_assessment.spec import SPEC_WS1, SPEC_WS2, get_spec_cols
+from adaptive_self_assessment.predictor import predict_item_ws1, predict_item_ws2
+
+df_w1 = pd.read_csv("data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv")
+df_w2 = pd.read_csv("data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv")
+_, _, ca_cols_ws1, ra_col_ws1, ignore_cols_ws1 = get_spec_cols(df_w1, SPEC_WS1)
+pra_col_ws2, pca_cols_ws2, ca_cols_ws2, ra_col_ws2, ignore_cols_ws2 = get_spec_cols(df_w2, SPEC_WS2)
+
+def test_predict_item_ws1():
+    print("=== Item Prediction Test in WS1 ===")
+    use_id = np.random.randint(1, len(df_w1)+1)
+    print( "User ID for prediction:", use_id)
+    print("--------------------------------")
+
+    # 自分のデータを訓練データから除外
+    df_w1_train = df_w1[df_w1.index != use_id]
+
+    # そのユーザーの真値を取得
+    Ca = {}
+    C = ca_cols_ws1.copy()
+
+    # 逐次推定
+    while C:
+        selected_question = select_question(C)
+        Ca[selected_question] = int(df_w1.loc[use_id, selected_question])
+        C.remove(selected_question)
+        print("Selected Question: ", selected_question)
+        print("Current Known Answers: ", Ca)
+        remaining_truth = {c: int(df_w1.loc[use_id, c]) for c in C}
+        print("Remaining Questions: ", remaining_truth)
+        preds, confidences = predict_item_ws1(
+            Ca=Ca,
+            C=C,
+            df_train=df_w1_train,
+        )
+
+        print(f"Predicted: {preds}")
+        print(f"Confidences: {confidences}")
+        print("--------------------------------")
+    # 最終的に全項目が確定していること
+    assert len(Ca) == len(ca_cols_ws1)
+    assert C == []
+
+
+# def test_predict_item_ws2():
+#     print("=== Item Prediction Test in WS2 ===")
+#     use_id = np.random.randint(0, len(df_w2))
+#     print( "User ID for prediction:", use_id)
+#     df_w2_train = df_w2[df_w2.index != use_id]
+#     Pra = df_w2.loc[use_id, pra_col_ws2]
+#     Pca = {col: int(df_w2.loc[use_id, col]) for col in pca_cols_ws2}
+#     Ca = {}
+#     C = ca_cols_ws2.copy()
+
+#     while C:
+#         selected_question = select_question(C)
+#         print("Selected Question: ", selected_question)
+#         preds, confidences = predict_item_ws2(
+#             Pra=Pra,
+#             Pca=Pca,
+#             Ca=Ca,
+#             C=C,
+#             df_train=df_w2_train,
+#             spec=SPEC_WS2
+#         )
+#         print(f"Predicted: {preds}, Confidences: {confidences}")
+#         Ca[selected_question] = preds[selected_question]
+#         C.remove(selected_question)
+    
+#     assert len(Ca) == len(ca_cols_ws2)
+#     assert C == []
+
+
