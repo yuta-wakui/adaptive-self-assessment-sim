@@ -184,3 +184,71 @@ def predict_item_ws2(
             confidences[item] = 0.5
 
     return preds, confidences
+
+def predict_overall_ws1(
+        Ca: Dict[str, int],
+        df_train: pd.DataFrame,
+        model_name: str = "logistic_regression",
+        random_state: int = 42
+) -> Tuple[int, float]:
+    """
+    1回分の学習者データを使って、総合評価を選択されたモデルで推定
+    Parameters:
+    ----------
+        Ca: Dict[str, int]
+            回答済みor補完済み項目
+        df_train: pd.DataFrame 
+            予測に使う訓練データ
+        model_name: str
+            使用するモデル名 (現状"logistic_regression"のみ対応)
+        random_state: int
+            乱数シード
+    Returns:
+    -------
+        pred: int
+            予測された総合評価結果
+        confidence: float
+            予測の信頼度
+    """
+    # 列名の取得
+    _, _, ca_cols, ra_cols, _ = get_spec_cols(df_train, SPEC_WS1)
+
+    # 学習データの作成
+    if ca_cols not in df_train.columns or ra_cols not in df_train.columns:
+        raise ValueError("Required columns missing in training data.")
+
+    X_train = df_train[ca_cols]
+    y_train = df_train[ra_cols]
+
+    # モデルの定義
+    model = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(
+            max_iter=5000,
+            class_weight="balanced",
+            random_state=random_state
+        ))
+    ])
+
+    # モデルの学習
+    model.fit(X_train, y_train)
+
+    # 特徴量のうちCaにないものを確認
+    missing_features = [c for c in ca_cols if c not in Ca]
+    if missing_features:
+        raise ValueError(f"Missing features in Ca: {missing_features}")
+    # 総合評価を推定
+    # 予測用データの作成
+    x_pred = pd.DataFrame([[Ca.get(c, -1) for c in ca_cols]], columns=ca_cols)
+
+    # 総合評価の予測
+    proba = model.predict_proba(x_pred)[0]
+    classes = model.named_steps["clf"].classes_
+    pred_idx = int(np.argmax(proba))
+    pred = int(classes[pred_idx])
+    confidence = float(proba[pred_idx])
+
+    return pred, confidence
+
+def predict_overall_ws2():
+    return
