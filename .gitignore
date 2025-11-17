@@ -37,6 +37,9 @@ logs/
 reports/
 experiments/*/results.json
 
+# 一時的なファイル
+temp.py
+
 # モデルファイル（容量・再現性・著作権リスク対策）
 *.pkl
 *.joblib

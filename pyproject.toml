@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "adaptive_self_assessment"
+version = "0.0.1"
+description = "Adaptive Self-Assessment library"
+readme = "README.md"
+authors = [{ name = "Yuta Wakui", email = "w2531163@gl.cc.uec.ac.jp" }]
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.0.0",
+  "numpy>=1.24.0",
+  "scikit-learn>=1.3.0",
+  "tqdm>=4.66.0",
+  "pyyaml>=6.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"

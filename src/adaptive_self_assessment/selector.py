@@ -29,4 +29,4 @@ def select_question(C: List[str]) -> str:
     if not C:
         raise ValueError("質問項目のリストが空です。")
     
-    return _rng.choice(C)
+    return str(_rng.choice(C))

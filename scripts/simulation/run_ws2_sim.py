@@ -4,11 +4,11 @@ import os
 import time
 from typing import List, Dict, Any
 
-from adaptive_self_assessment.spec import SPEC_WS1, get_spec_cols
+from adaptive_self_assessment.spec import SPEC_WS2, get_spec_cols
 from adaptive_self_assessment.selector import select_question, set_selector_seed
-from adaptive_self_assessment.predictor import predict_item_ws1, predict_overall_ws1
+from adaptive_self_assessment.predictor import predict_item_ws2, predict_overall_ws2
 
-def run_ws1_simulation(
+def run_ws2_simulation(
         RC_THRESHOLD: float = 0.80, 
         RI_THRESHOLD: float = 0.70, 
         skill_name: str = None,
@@ -18,14 +18,14 @@ def run_ws1_simulation(
         logs_path: str = None
     ) -> Dict[str, Any]:
     """
-    1回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
+    2回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
     Parameters:
     -----------
         RC_THRESHOLD: float
             補完の信頼度閾値
         RI_THRESHOLD: float
             総合評価の信頼度閾値
-        skill_name: str
+        skill_ name: str
             対象の能力
         model_type: str
             総合評価推定に使用するモデルのタイプ
@@ -43,12 +43,14 @@ def run_ws1_simulation(
     logs: List[Dict[str, Any]] = []
 
     # 列名を取得
-    _, _, ca_cols_ws1, ra_col, _ = get_spec_cols(train_df, SPEC_WS1)
+    pra_col, pca_cols, ca_cols_ws2, ra_col, _ = get_spec_cols(train_df, SPEC_WS2)
 
     # 各ユーザーに対してシミュレーションを実行
     for _, user in test_df.iterrows():
         user_id = user["ID"] # ユーザーIDを取得
-        C = ca_cols_ws1.copy() # 未回答項目リスト
+        Pra = user[pra_col] # 過去の総合評価
+        PCa = {c: user[c] for c in pca_cols} # 過去のチェックリスト結果
+        C = ca_cols_ws2.copy() # 未回答項目リスト
         Ca = {} # 回答or補完済み項目
 
         answered_items = [] # 実際に回答項目
@@ -61,11 +63,11 @@ def run_ws1_simulation(
         set_selector_seed(np.random.randint(0, 10000))
 
         # 処理開始時間
-        start_time = time.time()  
+        start_time = time.time()   
 
         # 未回答項目がある限り繰り返す
         while C:
-            
+
             # 質問項目の選択
             ci = select_question(C)
 
@@ -75,8 +77,15 @@ def run_ws1_simulation(
             C.remove(ci) # Cから削除
             answered_items.append(ci) # 実際に回答したことを記録
 
-            # 未回答項目Cを推定
-            Rc_preds, Rc_confidences = predict_item_ws1(Ca, C, train_df, random_state=42)
+            # 残り項目の補完
+            Rc_preds, Rc_confidences = predict_item_ws2(
+                Pra,
+                PCa,
+                Ca,
+                C,
+                train_df,
+                random_state=42
+            )
 
             # 信頼度が閾値以上のものをCaに追加
             for item in C[:]:  # Cのコピーを使用してループ
@@ -87,10 +96,17 @@ def run_ws1_simulation(
                     Ca[item] = pred_value # Caに追加
                     C.remove(item) # Cから削除
                     actual_value = int(user[item]) # 実際の値を取得
-                    complemented_items.append((item, pred_value, conf, actual_value)) # 補完された情報を記録
-        
-        # すべての項目が回答or補完された後、総合評価を推定
-        Ra_pred, Ra_conf = predict_overall_ws1(Ca, train_df, model_name=model_type, random_state=42)
+                    complemented_items.append((item, pred_value, conf, actual_value)) # 補完された情報を記録 
+                
+        # すべての項目が回答or補完された後に総合評価を推定
+        Ra_pred, Ra_conf = predict_overall_ws2(
+            Pra,
+            PCa,
+            Ca,
+            train_df,
+            model_name=model_type,
+            random_state=42
+        )
 
         # 処理時間の記録
         end_time = time.time()
@@ -111,11 +127,11 @@ def run_ws1_simulation(
         if complemented_items:
             complement_accuracy = correct_count / len(complemented_items)
 
-        # 各ユーザーのlogを作成
+        # 各userのシミュレーション結果を格納
         user_log = {
             "user_id": user_id,
-            "skill": skill_name,
-            "total_questions": len(ca_cols_ws1),
+            "skill" : skill_name,
+            "total_questions": len(ca_cols_ws2),
             "num_answered_questions": len(answered_items),
             "num_complemented_questions": len(complemented_items),
             "predicted_ra": Ra_pred,
@@ -133,9 +149,8 @@ def run_ws1_simulation(
             "num_train": len(train_df),
             "model_type": model_type
         }
-
         logs.append(user_log)
-
+    
     # 結果集計
     logs_df = pd.DataFrame(logs) # 各ユーザーの結果をデータフレームに変換
 
@@ -163,10 +178,10 @@ def run_ws1_simulation(
         "accuracy_over_threshold": accuracy_over_threshold,
         "accuracy_all": accuracy_all,
         "coverage_over_threshold": coverage_over_threshold,
-        "total_questions": len(ca_cols_ws1),
+        "total_questions": len(ca_cols_ws2),
         "avg_answered_questions": float(logs_df["num_answered_questions"].mean()),
         "avg_complemented_questions": float(logs_df["num_complemented_questions"].mean()),
-        "logs_pash": logs_path,
+        "logs_path": logs_path,
         "avg_response_time": float(logs_df["response_time"].mean()),
         "max_response_time": float(logs_df["response_time"].max()),
         "min_response_time": float(logs_df["response_time"].min()),
