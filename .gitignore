@@ -1,84 +1,23 @@
-# --- Python ---
+# Python:
 __pycache__/
+*.py[codz]
+
+# pytest:
+.pytest_cache/
+
+# OS:
 .DS_Store
 
-# --- VSCode ---
+# venv:
 venv/
 .env/
-.envrc
+.envr/
 
+# Data:
+data/*
+!data/README.md
+!data/sample/
+!data/sample/*.csv
 
-# ================================
-# Python / VSCode 基本設定
-# ================================
-__pycache__/
-*.py[cod]
-*.pyo
-*.so
-*.egg-info/
-*.log
-*.DS_Store
-.env
-.venv/
-venv/
-.idea/
-.vscode/
-.ipynb_checkpoints/
-
-# ================================
-# 研究データ関係
-# ================================
-
-# 生データは非公開、匿名化・前処理済データの一部（能力「情報リテラシー」）のみ公開
-data/**/*.csv
-!data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv
-!data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv
-
-# 公開してよいのは synthetic のみ
-!data/synthetic/
-!data/README_data.md
-
-# --- Logs ---
-
-
-# 結果・中間出力
+# Outputs:
 outputs/
-results/
-logs/
-reports/
-experiments/*/results.json
-
-# 一時的なファイル
-temp.py
-
-# モデルファイル（容量・再現性・著作権リスク対策）
-*.pkl
-*.joblib
-*.sav
-*.h5
-*.onnx
-
-# ================================
-# 分析・可視化
-# ================================
-notebooks/*_tmp.ipynb
-notebooks/*_dev.ipynb
-notebooks/.ipynb_checkpoints/
-
-# ================================
-# OS / エディタ / キャッシュ
-# ================================
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-*.swp
-*.swo
-
-# ================================
-# ビルド・成果物
-# ================================
-dist/
-build/
-*.zip
-*.tar.gz
-*.bak
