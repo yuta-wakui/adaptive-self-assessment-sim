@@ -1,3 +1,13 @@
+# --- Python ---
+__pycache__/
+.DS_Store
+
+# --- VSCode ---
+venv/
+.env/
+.envrc
+
+
 # ================================
 # Python / VSCode 基本設定
 # ================================
@@ -19,16 +29,18 @@ venv/
 # 研究データ関係
 # ================================
 
-# 生データ・加工データ（非公開）
-data/raw/
-data/processed/
-data/real/
-data/private/
-data/tmp/
+# 生データは非公開、匿名化・前処理済データの一部（能力「情報リテラシー」）のみ公開
+data/**/*.csv
+!data/sample/1_syntheticdata_informationliteracy.csv
+!data/sample/ws2_1_information_130_processed.csv
+!data/sample/ws2_1_information_1300_processed.csv
 
 # 公開してよいのは synthetic のみ
 !data/synthetic/
 !data/README_data.md
+
+# --- Logs ---
+
 
 # 結果・中間出力
 outputs/
