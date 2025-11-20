@@ -31,9 +31,8 @@ venv/
 
 # 生データは非公開、匿名化・前処理済データの一部（能力「情報リテラシー」）のみ公開
 data/**/*.csv
-!data/sample/1_syntheticdata_informationliteracy.csv
-!data/sample/ws2_1_information_130_processed.csv
-!data/sample/ws2_1_information_1300_processed.csv
+!data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv
+!data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv
 
 # 公開してよいのは synthetic のみ
 !data/synthetic/
