@@ -22,19 +22,19 @@ import numpy as np
 # %%
 # データファイルのパス取得
 import os 
-for dirname, _, filenames in os.walk('../../data/processed/合成データ_240531_adjusted'):
+for dirname, _, filenames in os.walk('../data/processed/ws1_synthetic_240531_processed'):
     for filename in filenames:
         print(os.path.join(dirname, filename))
 # %%
 # データの読み込み
-df_info = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_informationliteracy20240531_adjusted.csv')
-df_thinking = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_thinking20240606_adjusted.csv')
-df_writing = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_writing20240531_adjusted.csv')
-df_presen = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_presen20240531_adjusted.csv')
-df_quant = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_quant20240606_adjusted.csv')
-df_learning = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_learning20240606_adjusted.csv')
-df_act = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_act20240606_adjusted.csv')
-df_teamwork = pd.read_csv('../../data/processed/合成データ_240531_adjusted/synthetivdata_teamwork20240606_adjusted.csv')
+df_info = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/1_syntheticdata_information.csv')
+df_thinking = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/2_syntheticdata_thinking.csv')
+df_writing = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/3_syntheticdata_writing.csv')
+df_presen = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/4_syntheticdata_presen.csv')
+df_quant = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/5_syntheticdata_quant.csv')
+df_learning = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/6_syntheticdata_learning.csv')
+df_act = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/7_syntheticdata_act.csv')
+df_teamwork = pd.read_csv('../data/processed/ws1_synthetic_240531_processed/8_syntheticdata_teamwork.csv')
 
 # %%
 df_info.head(3)
@@ -51,7 +51,6 @@ for df in dfs:
 df_dict = dict(zip(skills, dfs))
 # %%
 # モデルの定義
-
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from lightgbm import LGBMClassifier
@@ -111,7 +110,7 @@ for skill, df in df_dict.items():
         print(f'Processing target: {target} of {skill}')
 
         # 目的変数と特徴量に分割
-        X = df.drop(columns=[target])
+        X = df.drop(columns=[target]).copy()
         y = df[target]
 
         # 目的変数が1クラスのみの場合はスキップ
@@ -189,23 +188,8 @@ summary_by_item = (
 
 print("能力、項目ごとの各モデルの平均精度")
 display(summary_by_item)
-# %% summary_by_itemをCSVに保存
-
-# 保存先フォルダ（なければ作成）
-save_dir = "results/compare_completion_algorithms"
-os.makedirs(save_dir, exist_ok=True)
-
-# ファイル名
-save_path = os.path.join(save_dir, f"ws1_summary_by_item_20251006.csv")
-
-# CSVとして保存
-summary_by_item.to_csv(save_path)
-
-print(f"summary_by_item を保存しました → {save_path}")
-
 # %%
-# %%
-# summary_by_skillとsummary_by_itemを表形式で保存
+# summary_by_skillとsummary_by_itemを表形式で変換
 
 # accuracyとf1_macroをそれぞれpivotして表形式に変換
 acc_table = (
@@ -221,49 +205,45 @@ f1_table = (
     .round(3)
 )
 
-# 並び順を統一
+# 列（モデル）の並び順を統一
 model_order = ["Logistic Regression", "Random Forest", "Gradient Boosting", "LightGBM", "MLP", "k-NN", "SVM"]
 acc_table = acc_table[model_order]
 f1_table = f1_table[model_order]
 
+# 行（スキル）の並び順を統一
+skill_order = ["info", "thinking", "writing", "presen", "quant", "learning", "act", "teamwork"]
+acc_table = acc_table.reindex(skill_order)
+f1_table = f1_table.reindex(skill_order)
+# %%
+# %% summary_by_skill / summary_by_item / acc_table / f1_table を CSV で保存
+
 # 出力先ディレクトリ
-save_dir = "results/compare_completion_algorithms"
+save_dir = "../outputs/results_csv/ws1/compare_completion_algorithms/"
 os.makedirs(save_dir, exist_ok=True)
 
-# LaTeXのスタイルを整える（caption, label, boldなど）
-def df_to_latex_table(df, caption, label):
-    latex_str = df.to_latex(
-        index=True,
-        float_format="%.3f",
-        escape=False,   # 太字などを有効化するため
-        column_format="l" + "c" * len(df.columns),
-    )
-    # LaTeX文法を整える
-    latex_str = (
-        "\\begin{table}[htbp]\n"
-        "\\centering\n"
-        f"\\caption{{{caption}}}\n"
-        f"\\label{{{label}}}\n"
-        + latex_str
-        + "\\end{table}\n"
-    )
-    return latex_str
+# 1. 能力、項目、fold、モデルごとの結果
+results_path = os.path.join(save_dir, "ws1_results_cv_detail.csv")
+results_df.to_csv(results_path, index=False)
+print(f"Saved CV results → {results_path}")
 
-# LaTeXテーブル生成
-acc_latex = df_to_latex_table(
-    acc_table, "能力ごとの各モデル平均Accuracy（5-fold CV）", "tab:compare_accuracy_by_skill_ws1"
-)
-f1_latex = df_to_latex_table(
-    f1_table, "能力ごとの各モデル平均F1_macro（5-fold CV）", "tab:compare_f1_by_skill_ws1"
-)
+# 2. 能力、モデルごとの平均精度
+summary_skill_path = os.path.join(save_dir, "ws1_summary_by_skill.csv")
+summary_by_skill.to_csv(summary_skill_path)
+print(f"Saved summary_by_skill → {summary_skill_path}")
 
-# ファイル保存
-with open(os.path.join(save_dir, "table_accuracy_by_skill_ws1.tex"), "w") as f:
-    f.write(acc_latex)
-with open(os.path.join(save_dir, "table_f1macro_by_skill_ws1.tex"), "w") as f:
-    f.write(f1_latex)
+# 3. 能力、項目、モデルごとの平均精度
+summary_item_path = os.path.join(save_dir, "ws1_summary_by_item.csv")
+summary_by_item.to_csv(summary_item_path)
+print(f"Saved summary_by_item → {summary_item_path}")
 
-print("LaTeXファイルを保存しました：")
-print(f"- {save_dir}/table_accuracy_by_skill_ws1.tex")
-print(f"- {save_dir}/table_f1macro_by_skill_ws1.tex")
+# 4. ピボット済みの表（論文用の表形式）
+acc_path = os.path.join(save_dir, "ws1_accuracy_table_by_skill.csv")
+f1_path = os.path.join(save_dir, "ws1_f1macro_table_by_skill.csv")
+
+acc_table.to_csv(acc_path)
+f1_table.to_csv(f1_path)
+
+print("Saved pivot tables:")
+print(f"- {acc_path}")
+print(f"- {f1_path}")
 # %%

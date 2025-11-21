@@ -197,22 +197,8 @@ summary_by_item = (
 
 print("能力、項目ごとの各モデルの平均精度")
 display(summary_by_item)
-# %% summary_by_itemをCSVに保存
-
-# 保存先フォルダ（なければ作成）
-save_dir = "results/compare_completion_algorithms"
-os.makedirs(save_dir, exist_ok=True)
-
-# ファイル名
-save_path = os.path.join(save_dir, f"ws2_summary_by_item_20251006.csv")
-
-# CSVとして保存
-summary_by_item.to_csv(save_path)
-
-print(f"summary_by_item を保存しました → {save_path}")
-
 # %%
-# summary_by_skillとsummary_by_itemを表形式で保存
+# summary_by_skillとsummary_by_itemを表形式で変換
 
 # accuracyとf1_macroをそれぞれpivotして表形式に変換
 acc_table = (
@@ -228,49 +214,44 @@ f1_table = (
     .round(3)
 )
 
-# 並び順を統一
+# 列（モデル）の並び順を統一
 model_order = ["Logistic Regression", "Random Forest", "Gradient Boosting", "LightGBM", "MLP", "k-NN", "SVM"]
 acc_table = acc_table[model_order]
 f1_table = f1_table[model_order]
 
+# 行（スキル）の並び順を統一
+skill_order = ["info", "thinking", "writing", "presen", "quant", "learning", "act", "teamwork"]
+acc_table = acc_table.reindex(skill_order)
+f1_table = f1_table.reindex(skill_order)
+# %%
+# %% summary_by_skill / summary_by_item / acc_table / f1_table を CSV で保存
+
 # 出力先ディレクトリ
-save_dir = "results/compare_completion_algorithms"
+save_dir = "../outputs/results_csv/ws2/compare_completion_algorithms/"
 os.makedirs(save_dir, exist_ok=True)
 
-# LaTeXのスタイルを整える（caption, label, boldなど）
-def df_to_latex_table(df, caption, label):
-    latex_str = df.to_latex(
-        index=True,
-        float_format="%.3f",
-        escape=False,   # 太字などを有効化するため
-        column_format="l" + "c" * len(df.columns),
-    )
-    # LaTeX文法を整える
-    latex_str = (
-        "\\begin{table}[htbp]\n"
-        "\\centering\n"
-        f"\\caption{{{caption}}}\n"
-        f"\\label{{{label}}}\n"
-        + latex_str
-        + "\\end{table}\n"
-    )
-    return latex_str
+# 1. 能力、項目、fold、モデルごとの結果
+results_path = os.path.join(save_dir, "ws2_results_cv_detail.csv")
+results_df.to_csv(results_path, index=False)
+print(f"Saved CV results → {results_path}")
 
-# LaTeXテーブル生成
-acc_latex = df_to_latex_table(
-    acc_table, "能力ごとの各モデル平均Accuracy（5-fold CV）", "tab:compare_accuracy_by_skill_ws2"
-)
-f1_latex = df_to_latex_table(
-    f1_table, "能力ごとの各モデル平均f1-macro（5-fold CV）", "tab:compare_f1_by_skill_ws2"
-)
+# 2. 能力、モデルごとの平均精度
+summary_skill_path = os.path.join(save_dir, "ws2_summary_by_skill.csv")
+summary_by_skill.to_csv(summary_skill_path)
+print(f"Saved summary_by_skill → {summary_skill_path}")
 
-# ファイル保存
-with open(os.path.join(save_dir, "table_accuracy_by_skill_ws2.tex"), "w") as f:
-    f.write(acc_latex)
-with open(os.path.join(save_dir, "table_f1macro_by_skill_ws2.tex"), "w") as f:
-    f.write(f1_latex)
+# 3. 能力、項目、モデルごとの平均精度
+summary_item_path = os.path.join(save_dir, "ws2_summary_by_item.csv")
+summary_by_item.to_csv(summary_item_path)
+print(f"Saved summary_by_item → {summary_item_path}")
 
-print("LaTeXファイルを保存しました：")
-print(f"- {save_dir}/table_accuracy_by_skill_ws2.tex")
-print(f"- {save_dir}/table_f1macro_by_skill_ws1.tex")
-# %%
+# 4. ピボット済みの表（論文用の表形式）
+acc_path = os.path.join(save_dir, "ws2_accuracy_table_by_skill.csv")
+f1_path = os.path.join(save_dir, "ws2_f1macro_table_by_skill.csv")
+
+acc_table.to_csv(acc_path)
+f1_table.to_csv(f1_path)
+
+print("Saved pivot tables:")
+print(f"- {acc_path}")
+print(f"- {f1_path}")
