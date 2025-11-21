@@ -15,7 +15,7 @@ def set_selector_seed(seed: int) -> None:
     global _rng
     _rng = np.random.default_rng(seed)
 
-def select_question(C: List[str]) -> str:
+def select_question(C: List[str], strategy: str = "random") -> str:
     """
     質問項目をランダムに選択する関数
     
@@ -23,10 +23,15 @@ def select_question(C: List[str]) -> str:
     ----------
     C: list of str
         残りの質問項目のリスト
+    strategy: str
+        選択戦略（現在は"random"のみ対応）
     Returns:
         str: 選択された質問項目
     """
     if not C:
         raise ValueError("質問項目のリストが空です。")
+
+    if strategy == "random":
+        return str(_rng.choice(C))
     
-    return str(_rng.choice(C))
+    raise ValueError(f"Unknown selection strategy: {strategy}")

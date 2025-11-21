@@ -152,6 +152,12 @@ def run_ws1_simulation(
     # 自動推定の全体の精度
     accuracy_all = float(logs_df["correct"].mean() * 100)
 
+    # 平均回答数・平均補完数・削減率を計算
+    avg_answered_questions = float(logs_df["num_answered_questions"].mean())
+    avg_complemented_questions = float(logs_df["num_complemented_questions"].mean())
+    total_questions = len(ca_cols_ws1)
+    reduction_rate = float((1.0 - avg_answered_questions / total_questions) * 100.0)
+
     # シミュレーション結果を辞書にまとめる
     sim_results = {
         "skill": skill_name,
@@ -163,10 +169,10 @@ def run_ws1_simulation(
         "accuracy_over_threshold": accuracy_over_threshold,
         "accuracy_all": accuracy_all,
         "coverage_over_threshold": coverage_over_threshold,
-        "total_questions": len(ca_cols_ws1),
-        "avg_answered_questions": float(logs_df["num_answered_questions"].mean()),
-        "avg_complemented_questions": float(logs_df["num_complemented_questions"].mean()),
-        "logs_pash": logs_path,
+        "total_questions": total_questions,
+        "avg_answered_questions": avg_answered_questions,
+        "avg_complemented_questions": avg_complemented_questions,
+        "reduction_rate": reduction_rate,
         "avg_response_time": float(logs_df["response_time"].mean()),
         "max_response_time": float(logs_df["response_time"].max()),
         "min_response_time": float(logs_df["response_time"].min()),

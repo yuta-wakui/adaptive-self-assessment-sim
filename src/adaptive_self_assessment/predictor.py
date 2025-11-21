@@ -37,13 +37,13 @@ def predict_item_ws1(
     confidences: Dict[str, float] = {}
 
     # Caにあるキーのうち、df_trainに存在する列のみを使用
-    ca_cols_exist: List = [c for c in Ca.keys() if c in df_train.columns]
+    ca_cols_exist: List[str] = [c for c in Ca.keys() if c in df_train.columns]
 
     # 各項目の予測
     for item in C:
         try:
             # 学習に使う特徴量の列
-            x_cols: List = [c for c in ca_cols_exist if c != item]
+            x_cols: List[str] = [c for c in ca_cols_exist if c != item]
             # 使える特徴量がない or 訓練データに対象項目が存在しない場合はエラー
             if len(x_cols) == 0 or item not in df_train.columns:
                 raise ValueError("No usable features or target column missing.")
@@ -72,7 +72,7 @@ def predict_item_ws1(
 
             # チェック項目を推定
             # 予測用データの作成
-            x_pred = pd.DataFrame([[Ca.get(c, -1) for c in x_cols]], columns=x_cols)
+            x_pred = pd.DataFrame([[Ca[c] for c in x_cols]], columns=x_cols)
 
             # 項目の予測
             proba = model.predict_proba(x_pred)[0]
@@ -81,7 +81,7 @@ def predict_item_ws1(
             preds[item] = int(classes[pred_idx])
             confidences[item] = float(proba[pred_idx])
         except Exception as e:
-            print(f"[predict_items error] {item}: {e}")
+            print(f"[predict_item_ws1 error] target={item}: {e}")
             preds[item] = 1
             confidences[item] = 0.5
 
@@ -132,7 +132,7 @@ def predict_item_ws2(
     for item in C:
         try:
             # 学習に使う特徴量の列
-            x_cols: List = [pra_col] + pca_cols + [c for c in ca_cols_exist if c != item]
+            x_cols: List[str] = [pra_col] + pca_cols + [c for c in ca_cols_exist if c != item]
             if len(x_cols) == 0 or item not in df_train.columns:
                 raise ValueError("No usable features or target column missing.")
             
@@ -167,9 +167,9 @@ def predict_item_ws2(
                 if c == pra_col:
                     row_vals.append(Pra)
                 elif c in pca_cols:
-                    row_vals.append(Pca.get(c, -1))
+                    row_vals.append(Pca[c])
                 else:
-                    row_vals.append(Ca.get(c, -1))
+                    row_vals.append(Ca[c])
             x_pred = pd.DataFrame([row_vals], columns=x_cols)
 
             # 項目の予測
@@ -179,7 +179,7 @@ def predict_item_ws2(
             preds[item] = int(classes[pred_idx])
             confidences[item] = float(proba[pred_idx])
         except Exception as e:
-            print(f"[predict_items error] {item}: {e}")
+            print(f"[predict_item_ws2 error] target={item}: {e}")
             preds[item] = 1
             confidences[item] = 0.5
 
@@ -211,25 +211,28 @@ def predict_overall_ws1(
             予測の信頼度
     """
     # 列名の取得
-    _, _, ca_cols, ra_cols, _ = get_spec_cols(df_train, SPEC_WS1)
+    _, _, ca_cols, ra_col, _ = get_spec_cols(df_train, SPEC_WS1)
 
     # 学習データの作成
-    for c in ca_cols + [ra_cols]:
+    for c in ca_cols + [ra_col]:
         if c not in df_train.columns:
             raise ValueError("Required columns missing in training data.")
 
     X_train = df_train[ca_cols]
-    y_train = df_train[ra_cols]
+    y_train = df_train[ra_col]
 
     # モデルの定義
-    model = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(
-            max_iter=5000,
-            class_weight="balanced",
-            random_state=random_state
-        ))
-    ])
+    if model_name == "logistic_regression":
+        model = Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(
+                max_iter=5000,
+                class_weight="balanced",
+                random_state=random_state
+            ))
+        ])
+    else:
+        raise ValueError(f"Unsupported model_name: {model_name}")
 
     # モデルの学習
     model.fit(X_train, y_train)
@@ -240,7 +243,7 @@ def predict_overall_ws1(
         raise ValueError(f"Missing features in Ca: {missing_features}")
     # 総合評価を推定
     # 予測用データの作成
-    x_pred = pd.DataFrame([[Ca.get(c, -1) for c in ca_cols]], columns=ca_cols)
+    x_pred = pd.DataFrame([[Ca[c] for c in ca_cols]], columns=ca_cols)
 
     # 総合評価の予測
     proba = model.predict_proba(x_pred)[0]
@@ -283,26 +286,29 @@ def predict_overall_ws2(
             予測の信頼度
     """
     # 列名の取得
-    pra_col, pca_cols, ca_cols, ra_cols, _ = get_spec_cols(df_train, SPEC_WS2)
+    pra_col, pca_cols, ca_cols, ra_col, _ = get_spec_cols(df_train, SPEC_WS2)
 
     # 学習データの作成
-    for c in [pra_col] + pca_cols + ca_cols + [ra_cols]:
+    for c in [pra_col] + pca_cols + ca_cols + [ra_col]:
         if c not in df_train.columns:
             raise ValueError("Required columns missing in training data.")
     
     X_cols = [pra_col] + pca_cols + ca_cols
     X_train = df_train[X_cols]
-    y_train = df_train[ra_cols]
+    y_train = df_train[ra_col]
 
-    # モデルの定義
-    model = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(
-            max_iter=5000,
-            class_weight="balanced",
-            random_state=random_state
-        ))
-    ])
+    if model_name == "logistic_regression":
+        # モデルの定義
+        model = Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(
+                max_iter=5000,
+                class_weight="balanced",
+                random_state=random_state
+            ))
+        ])
+    else:
+        raise ValueError(f"Unsupported model_name: {model_name}")
 
     # モデルの学習
     model.fit(X_train, y_train)
@@ -321,9 +327,9 @@ def predict_overall_ws2(
         if c == pra_col:
             row_vals.append(Pra)
         elif c in pca_cols:
-            row_vals.append(Pca.get(c, -1))
+            row_vals.append(Pca[c])
         else:
-            row_vals.append(Ca.get(c, -1))
+            row_vals.append(Ca[c])
     x_pred = pd.DataFrame([row_vals], columns=X_cols)
 
     # 総合評価の予測

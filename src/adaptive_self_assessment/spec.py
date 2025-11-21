@@ -2,7 +2,7 @@ from typing import Tuple, List
 
 # 1回分の自己評価データ
 SPEC_WS1 = dict(
-    PCA_COL = None,
+    PRA_COL = None,
     PCA_PREFIX = None,
     CA_PREFIX = "item-",
     RA_COL = "assessment-result",
@@ -11,7 +11,7 @@ SPEC_WS1 = dict(
 
 # 2回分の自己評価データ
 SPEC_WS2 = dict(
-    PCA_COL = "w3-assessment-result",
+    PRA_COL = "w3-assessment-result",
     PCA_PREFIX = "w3-",
     CA_PREFIX = "w4-",
     RA_COL = "w4-assessment-result",
@@ -38,10 +38,10 @@ def get_spec_cols(df, spec: dict) -> Tuple[str | None , List[str] | None, List[s
             現在のチェック項目
         ra_col: str
             現在の総合評価
-        ignore_cols: Set[str]
+        ignore_cols: List[str]
             無視する列名の集合
     """
-    pra_col = spec.get("PCA_COL")
+    pra_col = spec.get("PRA_COL")
     pca_prefix = spec.get("PCA_PREFIX")
     ca_prefix = spec["CA_PREFIX"]
     ra_col = spec["RA_COL"]

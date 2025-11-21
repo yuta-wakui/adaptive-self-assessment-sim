@@ -25,7 +25,7 @@ def run_ws2_simulation(
             補完の信頼度閾値
         RI_THRESHOLD: float
             総合評価の信頼度閾値
-        skill_ name: str
+        skill_name: str
             対象の能力
         model_type: str
             総合評価推定に使用するモデルのタイプ
@@ -49,14 +49,13 @@ def run_ws2_simulation(
     for _, user in test_df.iterrows():
         user_id = user["ID"] # ユーザーIDを取得
         Pra = user[pra_col] # 過去の総合評価
-        PCa = {c: user[c] for c in pca_cols} # 過去のチェックリスト結果
+        Pca = {c: user[c] for c in pca_cols} # 過去のチェックリスト結果
         C = ca_cols_ws2.copy() # 未回答項目リスト
         Ca = {} # 回答or補完済み項目
 
         answered_items = [] # 実際に回答項目
         complemented_items = [] # 補完された項目
         time_log = None # 処理時間を記録
-        complement_accuracy = None # 補完の正解率
         correct_complement_items = [] # 正解した補完項目
 
         # 質問セレクタのシード設定
@@ -80,7 +79,7 @@ def run_ws2_simulation(
             # 残り項目の補完
             Rc_preds, Rc_confidences = predict_item_ws2(
                 Pra,
-                PCa,
+                Pca,
                 Ca,
                 C,
                 train_df,
@@ -101,7 +100,7 @@ def run_ws2_simulation(
         # すべての項目が回答or補完された後に総合評価を推定
         Ra_pred, Ra_conf = predict_overall_ws2(
             Pra,
-            PCa,
+            Pca,
             Ca,
             train_df,
             model_name=model_type,
@@ -119,6 +118,7 @@ def run_ws2_simulation(
         actual_Ra = int(user[ra_col])
 
         # 補完された項目の正解率を計算
+        complement_accuracy = None # 補完の正解率
         correct_count = 0
         for item, pred_val, _, actual_val in complemented_items:
             if pred_val == actual_val:
@@ -167,6 +167,12 @@ def run_ws2_simulation(
     # 自動推定の全体の精度
     accuracy_all = float(logs_df["correct"].mean() * 100)
 
+    # 平均回答数・平均補完数・削減率を計算
+    avg_answered_questions = float(logs_df["num_answered_questions"].mean())
+    avg_complemented_questions = float(logs_df["num_complemented_questions"].mean())
+    total_questions = len(ca_cols_ws2)
+    reduction_rate = float((1.0 - avg_answered_questions / total_questions) * 100.0)
+
     # シミュレーション結果を辞書にまとめる
     sim_results = {
         "skill": skill_name,
@@ -178,10 +184,10 @@ def run_ws2_simulation(
         "accuracy_over_threshold": accuracy_over_threshold,
         "accuracy_all": accuracy_all,
         "coverage_over_threshold": coverage_over_threshold,
-        "total_questions": len(ca_cols_ws2),
-        "avg_answered_questions": float(logs_df["num_answered_questions"].mean()),
-        "avg_complemented_questions": float(logs_df["num_complemented_questions"].mean()),
-        "logs_path": logs_path,
+        "total_questions": total_questions,
+        "avg_answered_questions": avg_answered_questions,
+        "avg_complemented_questions": avg_complemented_questions,
+        "reduction_rate": reduction_rate,
         "avg_response_time": float(logs_df["response_time"].mean()),
         "max_response_time": float(logs_df["response_time"].max()),
         "min_response_time": float(logs_df["response_time"].min()),
