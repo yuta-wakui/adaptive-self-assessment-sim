@@ -1,35 +1,34 @@
-# Data Policy
+# Data Directory
 
-This project uses self-assessment data collected in an educational setting.
-Due to privacy and ethical constraints, **the original datasets are NOT included in this repository**.
+This project uses self-assessment data of soft skills collected in an educational context to run simulations for **Machine Learning-driven Adaptive Self-Assessment**
+
+Due to privacy, ethics, and institutional data-handling policies, **the original datasets and full synthetic datasets used in the experiments are NOT included in this repository**
+
+Only small, safe-to-share sample data is provided for demonstration and usability testing.
 
 ## Directory Structure
 
-- `synthetic/`  
-  Synthetic datasets generated from the original data.  
-  Used for internal development and analysis.  
-  Only a subset may be shared as public samples.
+### **`synthetic/`**
+Synthetic datasets generated from the real self-assessment data.
 
-- `processed/`  
-  Preprocessed versions of the original data used in the experiments.  
-  **Not tracked by Git. Not publicly available.**
+The datasets were created using the statistical analysis software **HAD** by generating multivariate data from the **covariance matrix** of the original datasets.
 
-- `sample/`  
-  Publicly available **sample datasets** for reproducing the simulation pipeline
-  on a limited subset (e.g., the "information literacy" skill).
+These datasets replicate statistical properties but are derived from non-public data.
+**They are not tracked by Git and not publicly available.**
 
-## Public Sample Files
+### **`processed/`**
+Preprocessed versions of the synthetic data, used as input for simulation experiments.
 
-Currently included:
+Processing steps include:
+- Converting continuous synthetic values into discrete integer scales
+- Handling missing values
+- Cleaning and normalizing column names
 
-- `sample/ws2_1_information_130_processed.csv`  
-- `sample/ws2_1_information_1300_processed.csv`  
-- `sample/1_syntheticdata_informationliteracy.csv`  
+These datasets represent the actual inputs used in the experiments, but **are not included in this repository**
 
-These files are:
-- anonymized
-- limited to a single skill ("information literacy")
-- intended for demonstration and example usage only
+### **`sample/`**
+Example datasets generated for demonstration purposes.
 
-For full-scale experiments, please prepare your own datasets that follow
-the same column specification as defined in `adaptive_self_assessment/spec.py`.
+These samples are small, randomly generated datasets that mimic the structure of the
+processed synthetic data. They are safe to publish and can be used to test the
+simulation pipeline, verify the expected input format, and explore the library's behavior.
