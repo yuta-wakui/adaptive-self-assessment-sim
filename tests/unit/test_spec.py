@@ -4,7 +4,7 @@ import pytest
 from adaptive_self_assessment.spec import SPEC_WS1, SPEC_WS2, get_spec_cols
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv",
+    "data/sample/ws1_sample.csv",
 ])
 def test_get_spec_cols_ws1(ws1_path):
     if not os.path.exists(ws1_path):
@@ -27,7 +27,7 @@ def test_get_spec_cols_ws1(ws1_path):
     assert len(ca_cols) > 0
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv",
+    "data/sample/ws2_sample.csv",
 ])
 
 def test_get_spec_cols_ws2(ws2_path):

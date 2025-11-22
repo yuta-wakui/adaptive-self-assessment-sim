@@ -8,7 +8,7 @@ from adaptive_self_assessment.spec import SPEC_WS1, SPEC_WS2, get_spec_cols
 from adaptive_self_assessment.predictor import predict_item_ws1, predict_item_ws2, predict_overall_ws1, predict_overall_ws2
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv",
+    "data/sample/ws1_sample.csv",
 ])
 def test_predict_item_ws1(ws1_path):
     print("=== Item Prediction Test in WS1 ===")
@@ -20,8 +20,8 @@ def test_predict_item_ws1(ws1_path):
     # 列名の取得
     _, _, ca_cols_ws1, _, _ = get_spec_cols(df_w1, SPEC_WS1)
 
-    # テストするユーザーIDをランダムに選択（1からデータ数までの範囲）
-    use_id = np.random.randint(1, len(df_w1)+1)
+    # テストするユーザーIDをランダムに選択
+    use_id = np.random.choice(df_w1.index)
     print( "User ID for prediction:", use_id)
     print("--------------------------------")
 
@@ -33,7 +33,7 @@ def test_predict_item_ws1(ws1_path):
     C = ca_cols_ws1.copy()
 
     # 質問セレクタのシード設定
-    set_selector_seed(np.random.randint(0, 10000))
+    set_selector_seed(np.random.randint(0, 100))
 
     # 逐次推定
     while C:
@@ -64,7 +64,7 @@ def test_predict_item_ws1(ws1_path):
     assert C == []
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv",
+    "data/sample/ws2_sample.csv",
 ])
 def test_predict_item_ws2(ws2_path):
     print("=== Item Prediction Test in WS2 ===")
@@ -76,8 +76,8 @@ def test_predict_item_ws2(ws2_path):
     # 列名の取得
     pra_col_ws2, pca_cols_ws2, ca_cols_ws2, _, _ = get_spec_cols(df_w2, SPEC_WS2)
 
-    # テストするユーザーIDをランダムに選択（1からデータ数までの範囲）
-    use_id = np.random.randint(1, len(df_w2)+1)
+    # テストするユーザーIDをランダムに選択
+    use_id = np.random.choice(df_w2.index)
     print( "User ID for prediction:", use_id)
     print("--------------------------------")
 
@@ -127,7 +127,7 @@ def test_predict_item_ws2(ws2_path):
     assert C == []
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/processed/ws1_synthetic_240531_processed/1_syntheticdata_informationliteracy.csv",
+    "data/sample/ws1_sample.csv",
 ])
 def test_predict_overall_ws1(ws1_path):
     print("=== Overall Assessment Prediction Test in WS1 ===")
@@ -139,8 +139,8 @@ def test_predict_overall_ws1(ws1_path):
     # 列名の取得
     _, _, ca_cols_ws1, ra_col_ws1, _ = get_spec_cols(df_w1, SPEC_WS1)
 
-    # テストするユーザーIDをランダムに選択（1からデータ数までの範囲）
-    used_id = np.random.randint(1, len(df_w1)+1)
+    # テストするユーザーIDをランダムに選択
+    used_id = np.random.choice(df_w1.index)
     print( "User ID for prediction:", used_id)
     print("--------------------------------")
 
@@ -159,6 +159,7 @@ def test_predict_overall_ws1(ws1_path):
     preds, confidences = predict_overall_ws1(
         Ca=Ca,
         df_train=df_w1_train,
+        model_name="logistic_regression",
         random_state=42
     )
 
@@ -169,7 +170,7 @@ def test_predict_overall_ws1(ws1_path):
     assert 0.0 <= confidences <= 1.0
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/processed/w2-synthetic_20250326_1300_processed/ws2_1_information_1300_processed.csv",
+    "data/sample/ws2_sample.csv",
 ])
 def test_predict_overall_ws2(ws2_path):
     print("=== Overall Assessment Prediction Test in WS2 ===")
@@ -181,8 +182,8 @@ def test_predict_overall_ws2(ws2_path):
     # 列名の取得
     pra_col_ws2, pca_cols_ws2, ca_cols_ws2, ra_col_ws2, _ = get_spec_cols(df_w2, SPEC_WS2)
 
-    # テストするユーザーIDをランダムに選択（1からデータ数までの範囲）
-    used_id = np.random.randint(1, len(df_w2)+1)
+    # テストするユーザーIDをランダムに選択
+    used_id = np.random.choice(df_w2.index)
     print( "User ID for prediction:", used_id)
     print("--------------------------------")
 
@@ -207,6 +208,7 @@ def test_predict_overall_ws2(ws2_path):
         Pca=Pca,
         Ca=Ca,
         df_train=df_w2_train,
+        model_name="logistic_regression",
         random_state=42
     )
 
