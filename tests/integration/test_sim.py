@@ -35,6 +35,7 @@ def test_run_ws1_simulation(ws1_path):
 
     # 結果の検証
     assert isinstance(sim_results, dict)
+    assert 0<= sim_results["ruction_rate"] <=100
 
     expected_keys = {
         "skill",
@@ -86,6 +87,7 @@ def test_run_ws2_simulation(ws2_path):
 
     # 結果の検証
     assert isinstance(sim_results, dict)
+    assert 0<= sim_results["ruction_rate"] <=100
 
     expected_keys = {
         "skill",
