@@ -54,7 +54,6 @@ def run_ws1_simulation(
         answered_items = [] # 実際に回答項目
         complemented_items = [] # 補完された項目
         time_log = None # 処理時間を記録
-        complement_accuracy = None # 補完の正解率
         correct_complement_items = [] # 正解した補完項目
 
         # 質問セレクタのシード設定
@@ -103,6 +102,7 @@ def run_ws1_simulation(
         actual_Ra = int(user[ra_col])
 
         # 補完された項目の正解率を計算
+        complement_accuracy = None # 補完の正解率
         correct_count = 0
         for item, pred_val, _, actual_val in complemented_items:
             if pred_val == actual_val:

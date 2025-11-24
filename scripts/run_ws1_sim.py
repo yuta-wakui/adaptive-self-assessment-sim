@@ -5,20 +5,44 @@ from sklearn.model_selection import StratifiedKFold
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 
 
-def run_simulations():
-    # シミュレーションのパラメータ設定
-    model_name = "logistic_regression" # 総合評価推定に使用するモデル
-    dir_ws1 = "data/processed/ws1_synthetic_240531_processed"
-    dir_ws2 = "data/processed/w2-synthetic_20250326_1300_processed"
-    RC_THRESHOLD = 0.80
-    RI_THRESHOLD = 0.70
-    K = 5 # 交差検証の分割数
+def run_simulations(
+        model_name: str = "logistic_regression",
+        dir_ws1: str = None,
+        RC_THRESHOLD: float = 0.80,
+        RI_THRESHOLD: float = 0.70,
+        K: int = 5,
+        output_csv_path: str = None
+):
+    """
+    1回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
+    Parameters:
+    -----------
+        model_name: str
+            総合評価推定に使用するモデル
+        dir_ws1: str
+            WS1データのディレクトリパス
+        RC_THRESHOLD: float
+            補完の信頼度閾値
+        RI_THRESHOLD: float
+            総合評価の信頼度閾値
+        K: int
+            交差検証の分割数
+        output_csv_path: str
+            結果保存先パス
+    Returns:
+        results_ws1: pd.DataFrame
+            シミュレーション結果のデータフレーム
+    """
 
     # １回分の自己評価データでシミュレーション
     print("=== WS1 Simulation Tests Started ===")
 
     # 全ての能力の結果格納用リスト
     results_all_ws1 = []
+
+    # ディレクトリが指定されいない、存在しない場合は
+    if dir_ws1 is None or not os.path.exists(dir_ws1):
+        raise ValueError(f"Directory for WS1 data is not specified or does not exist: {dir_ws1}")
 
     # 対象ファイル名をソートして取得
     filenames_ws1 = sorted([f for f in os.listdir(dir_ws1) if f.endswith(".csv")])
@@ -67,7 +91,7 @@ def run_simulations():
                 model_type=model_name,
                 train_df=train_df,
                 test_df=test_df,
-                logs_path=f"outputs/logs/ws1/ws1_{skill_name}_fold{fold + 1}_logs.csv"
+                logs_path=f"outputs/logs/ws1/ws1_{skill_name}_fold{fold + 1}_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}_logs.csv"
             )
             fold_results.append(log_sim)
 
@@ -78,6 +102,8 @@ def run_simulations():
         result = {
             "skill_name": skill_name,
             "model": model_name,
+            "RC_THRESHOLD": RC_THRESHOLD,
+            "RI_THRESHOLD": RI_THRESHOLD,
             "total_questions": int(df_sim["total_questions"].mean()),
             "avg_answered_questions": df_sim["avg_answered_questions"].mean(),
             "avg_complemented_questions": df_sim["avg_complemented_questions"].mean(),
@@ -92,10 +118,33 @@ def run_simulations():
 
     # 結果を保存
     results_ws1 = pd.DataFrame(results_all_ws1)
-    os.makedirs("outputs/results_csv", exist_ok=True)
-    results_ws1.to_csv(f"outputs/results_csv/ws1/ws1_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv", index=False)
 
+    if output_csv_path is None:
+        # デフォルトの保存先パスを設定
+        output_csv_path = f"outputs/results_csv/ws1/ws1_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv"
+    
+    os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+    results_ws1.to_csv(output_csv_path, index=False)
+    
+    print(f"Saved WS1 results to: {output_csv_path}")
     print("=== WS1 Simulation Tests Completed ===")
 
+    return results_ws1
+
 if __name__ == "__main__":
-    run_simulations()
+    # シミュレーションのパラメータ設定
+    MODEL_NAME = "logistic_regression" # 総合評価推定に使用するモデル
+    DIR_WS1 = "data/processed/ws1_synthetic_240531_processed"
+    RC_THRESHOLD = 0.80
+    RI_THRESHOLD = 0.70
+    K = 5 # 交差検証の分割数
+    output_csv_path = (f"outputs/results_csv/ws1/ws1_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv")
+
+    results_ws1 = run_simulations(
+        model_name=MODEL_NAME,
+        dir_ws1=DIR_WS1,
+        RC_THRESHOLD=RC_THRESHOLD,
+        RI_THRESHOLD=RI_THRESHOLD,
+        K=K,
+        output_csv_path=output_csv_path
+    )

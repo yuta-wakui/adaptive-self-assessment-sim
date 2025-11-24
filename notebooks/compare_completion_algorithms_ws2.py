@@ -224,7 +224,7 @@ skill_order = ["info", "thinking", "writing", "presen", "quant", "learning", "ac
 acc_table = acc_table.reindex(skill_order)
 f1_table = f1_table.reindex(skill_order)
 # %%
-# %% summary_by_skill / summary_by_item / acc_table / f1_table を CSV で保存
+# summary_by_skill / summary_by_item / acc_table / f1_table を CSV で保存
 
 # 出力先ディレクトリ
 save_dir = "../outputs/results_csv/ws2/compare_completion_algorithms/"
@@ -255,3 +255,4 @@ f1_table.to_csv(f1_path)
 print("Saved pivot tables:")
 print(f"- {acc_path}")
 print(f"- {f1_path}")
+# %%

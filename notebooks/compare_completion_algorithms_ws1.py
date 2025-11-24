@@ -246,4 +246,3 @@ f1_table.to_csv(f1_path)
 print("Saved pivot tables:")
 print(f"- {acc_path}")
 print(f"- {f1_path}")
-# %%
