@@ -9,7 +9,7 @@ __pycache__/
 # OS:
 .DS_Store
 
-# venv / enb¥v:
+# venv / env:
 venv/
 .env/
 .envr/
