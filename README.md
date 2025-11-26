@@ -28,12 +28,20 @@ pip install -e .
 ### WS1 Simulation (Single-session)
 Run adaptive simulation using single-session datasets:
 ```bash
-python scripts/run_ws1_sim.py
+python scripts/run_ws1_sim.py \
+  --data_dir data/sample/ws1_sample.csv \
+  --rc 0.80 \
+  --ri 0.70 \
+  --k 5
 ```
 ### WS2 Simulation (Two-session)
 Run adaptive simulation using two-session datasets:
 ```bash
-python scripts/run_ws2_sim.py
+python scripts/run_ws2_sim.py \
+  --data_dir data/sample/ws1_sample.csv \
+  --rc 0.80 \
+  --ri 0.70 \
+  --k 5
 ```
 ### Threshold Comparison (RC × RI)
 Automatically run simulations for multiple confidence thresholds:

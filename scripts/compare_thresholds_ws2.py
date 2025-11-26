@@ -75,8 +75,8 @@ if __name__ == "__main__":
     # シミュレーションの環境設定
     MODEL_NAME = "logistic_regression" # 総合評価推定に使用するモデル
     DIR_WS2 = "data/processed/w2-synthetic_20250326_1300_processed"
-    RC_VALUES = [0.75, 0.80, 0.85]  # 補完の信頼度閾値のリスト
-    RI_VALUES = [0.65, 0.70, 0.75]  # 総合評価の信頼度閾値のリスト
+    RC_VALUES = [0.70, 0.75, 0.80, 0.85, 0.90]  # 補完の信頼度閾値のリスト
+    RI_VALUES = [0.60, 0.65, 0.70, 0.75, 0.80]  # 総合評価の信頼度閾値のリスト
     K = 5 # 交差検証の分割数
     output_csv_path = "outputs/results_csv/ws2/ws2_threshold_comparison_results.csv"
 

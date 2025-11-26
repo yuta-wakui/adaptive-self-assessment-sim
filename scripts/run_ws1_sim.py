@@ -1,9 +1,11 @@
 import os
 import pandas as pd
+import argparse
 from sklearn.model_selection import StratifiedKFold
 
-from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
+from datetime import datetime
 
+from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 
 def run_simulations(
         model_name: str = "logistic_regression",
@@ -37,15 +39,26 @@ def run_simulations(
     # １回分の自己評価データでシミュレーション
     print("=== WS1 Simulation Tests Started ===")
 
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # 全ての能力の結果格納用リスト
     results_all_ws1 = []
 
     # ディレクトリが指定されいない、存在しない場合は
     if dir_ws1 is None or not os.path.exists(dir_ws1):
         raise ValueError(f"Directory for WS1 data is not specified or does not exist: {dir_ws1}")
+    
+    # ログ用ディレクトリの作成
+    log_dir = os.path.join("outputs", "logs", "ws1", run_id)
+    os.makedirs(log_dir, exist_ok=True)
+    print(f"Logs will be saved to: {log_dir}")
 
     # 対象ファイル名をソートして取得
     filenames_ws1 = sorted([f for f in os.listdir(dir_ws1) if f.endswith(".csv")])
+
+    # ログファイル名用の閾値文字列
+    rc_str = str(RC_THRESHOLD).replace(".", "p")
+    ri_str = str(RI_THRESHOLD).replace(".", "p")
 
     # 各能力ごとにシミュレーションを実行
     for filename in filenames_ws1:
@@ -83,6 +96,11 @@ def run_simulations(
             train_df = df.iloc[train_idx]
             test_df = df.iloc[test_idx]
 
+            # ログパスの作成
+            log_filename = f"ws1_{skill_name}_fold{fold + 1}_rc{rc_str}_ri{ri_str}_logs.csv"
+            log_path = os.path.join(log_dir, log_filename)
+
+            
             # 適応型自己評価のシミュレーションの実行
             log_sim = run_ws1_simulation(
                 RC_THRESHOLD=RC_THRESHOLD,
@@ -91,7 +109,7 @@ def run_simulations(
                 model_type=model_name,
                 train_df=train_df,
                 test_df=test_df,
-                logs_path=f"outputs/logs/ws1/ws1_{skill_name}_fold{fold + 1}_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}_logs.csv"
+                logs_path=log_path
             )
             fold_results.append(log_sim)
 
@@ -104,6 +122,7 @@ def run_simulations(
             "model": model_name,
             "RC_THRESHOLD": RC_THRESHOLD,
             "RI_THRESHOLD": RI_THRESHOLD,
+            "num_folds": K,
             "total_questions": int(df_sim["total_questions"].mean()),
             "avg_answered_questions": df_sim["avg_answered_questions"].mean(),
             "avg_complemented_questions": df_sim["avg_complemented_questions"].mean(),
@@ -118,12 +137,15 @@ def run_simulations(
 
     # 結果を保存
     results_ws1 = pd.DataFrame(results_all_ws1)
-
-    if output_csv_path is None:
-        # デフォルトの保存先パスを設定
-        output_csv_path = f"outputs/results_csv/ws1/ws1_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv"
     
-    os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
+    if output_csv_path is None:
+        rc_str = str(RC_THRESHOLD).replace(".", "p")
+        ri_str = str(RI_THRESHOLD).replace(".", "p")
+        output_csv_path = f"outputs/results_csv/ws1/ws1_results_rc{rc_str}_ri{ri_str}_{run_id}.csv"
+
+    dirpath = os.path.dirname(output_csv_path)
+    if dirpath:
+        os.makedirs(dirpath, exist_ok=True)
     results_ws1.to_csv(output_csv_path, index=False)
     
     print(f"Saved WS1 results to: {output_csv_path}")
@@ -132,19 +154,21 @@ def run_simulations(
     return results_ws1
 
 if __name__ == "__main__":
-    # シミュレーションのパラメータ設定
-    MODEL_NAME = "logistic_regression" # 総合評価推定に使用するモデル
-    DIR_WS1 = "data/processed/ws1_synthetic_240531_processed"
-    RC_THRESHOLD = 0.80
-    RI_THRESHOLD = 0.70
-    K = 5 # 交差検証の分割数
-    output_csv_path = (f"outputs/results_csv/ws1/ws1_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", required=True, help="Path to WS1 processed CSVs")
+    parser.add_argument("--rc", type=float, default=0.80)
+    parser.add_argument("--ri", type=float, default=0.70)
+    parser.add_argument("--k", type=int, default=5)
+    parser.add_argument("--output", type=str, default=None)
+    
+    args = parser.parse_args()
 
     results_ws1 = run_simulations(
-        model_name=MODEL_NAME,
-        dir_ws1=DIR_WS1,
-        RC_THRESHOLD=RC_THRESHOLD,
-        RI_THRESHOLD=RI_THRESHOLD,
-        K=K,
-        output_csv_path=output_csv_path
+        model_name="logistic_regression",
+        dir_ws1=args.data_dir,
+        RC_THRESHOLD=args.rc,
+        RI_THRESHOLD=args.ri,
+        K=args.k,
+        output_csv_path=args.output
     )

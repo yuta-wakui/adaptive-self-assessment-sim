@@ -10,6 +10,9 @@ readme = "README.md"
 authors = [{ name = "Yuta Wakui", email = "w2531163@gl.cc.uec.ac.jp" }]
 requires-python = ">=3.10"
 license = { text = "MIT" }
+urls = {
+  "Homepage" = "https://github.com/yuta-wakui/adaptive-self-assessment-sim"
+}
 
 dependencies = [
   "pandas>=2.0.0",
@@ -35,8 +38,22 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/adaptive_self_assessment"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/scripts",
+  "/tests",
+  "README.md",
+  "LICENSE",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

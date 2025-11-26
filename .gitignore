@@ -26,3 +26,6 @@ notebooks/
 
 # Outputs:
 outputs/*
+
+# Preprocess codes:
+scripts/preprocess/

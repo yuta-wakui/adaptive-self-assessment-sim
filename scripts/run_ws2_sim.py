@@ -1,6 +1,9 @@
 import os
 import pandas as pd
+import argparse
 from sklearn.model_selection import StratifiedKFold
+
+from datetime import datetime
 
 from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
 
@@ -36,6 +39,8 @@ def run_simulations(
     # 2回分の自己評価データでシミュレーション
     print("=== WS2 Simulation Tests Started ===")
 
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     # 全ての能力の結果格納用リスト
     results_all_ws2 = []
 
@@ -43,8 +48,17 @@ def run_simulations(
     if dir_ws2 is None or not os.path.exists(dir_ws2):
         raise ValueError(f"Directory for WS2 data is not specified or does not exist: {dir_ws2}")
     
+    # ログ用ディレクトリの作成
+    log_dir = os.path.join("outputs", "logs", "ws2", run_id)
+    os.makedirs(log_dir, exist_ok=True)
+    print(f"Logs will be saved to: {log_dir}")
+
     # 対象ファイル名をソートして取得
     filenames_ws2 = sorted([f for f in os.listdir(dir_ws2) if f.endswith(".csv")])
+
+    # ログファイル名用の閾値文字列
+    rc_str = str(RC_THRESHOLD).replace(".", "p")
+    ri_str = str(RI_THRESHOLD).replace(".", "p")
 
     # 各能力ごとにシミュレーションを実行
     for filename in filenames_ws2:
@@ -82,6 +96,10 @@ def run_simulations(
             train_df = df.iloc[train_idx]
             test_df = df.iloc[test_idx]
 
+            # ログパスの作成
+            log_filename = f"ws2_{skill_name}_fold{fold + 1}_rc{rc_str}_ri{ri_str}_logs.csv"
+            log_path = os.path.join(log_dir, log_filename)
+
             # 適応型自己評価のシミュレーションの実行
             log_sim = run_ws2_simulation(
                 RC_THRESHOLD=RC_THRESHOLD,
@@ -90,7 +108,7 @@ def run_simulations(
                 model_type=model_name,
                 train_df=train_df,
                 test_df=test_df,
-                logs_path=f"outputs/logs/ws2/ws2_{skill_name}_fold{fold + 1}_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}_logs.csv"
+                logs_path=log_path
             )
             fold_results.append(log_sim)
 
@@ -103,6 +121,7 @@ def run_simulations(
             "model": model_name,
             "RC_THRESHOLD": RC_THRESHOLD,
             "RI_THRESHOLD": RI_THRESHOLD,
+            "num_folds": K,
             "total_questions": int(df_sim["total_questions"].mean()),
             "avg_answered_questions": df_sim["avg_answered_questions"].mean(),
             "avg_complemented_questions": df_sim["avg_complemented_questions"].mean(),
@@ -119,11 +138,14 @@ def run_simulations(
     results_ws2 = pd.DataFrame(results_all_ws2)
 
     if output_csv_path is None:
-        # デフォルトの保存先パスを設定
-        output_csv_path = f"outputs/results_csv/ws2/ws2_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv"
+        rc_str = str(RC_THRESHOLD).replace(".", "p")
+        ri_str = str(RI_THRESHOLD).replace(".", "p")
+        output_csv_path = f"outputs/results_csv/ws2/ws2_results_rc{rc_str}_ri{ri_str}_{run_id}.csv"
 
-    os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
-    results_ws2.to_csv(output_csv_path, index=False)  
+    dirpath = os.path.dirname(output_csv_path)
+    if dirpath:
+        os.makedirs(dirpath, exist_ok=True)
+    results_ws2.to_csv(output_csv_path, index=False)
 
     print(f"Saved WS2 results to: {output_csv_path}")
     print("=== WS2 Simulation Tests Completed ===")
@@ -131,19 +153,20 @@ def run_simulations(
     return results_ws2
 
 if __name__ == "__main__":
-    # シミュレーションのパラメータ設定
-    MODEL_NAME = "logistic_regression" # 総合評価推定に使用するモデル
-    DIR_WS2 = "data/processed/w2-synthetic_20250326_1300_processed"
-    RC_THRESHOLD = 0.80
-    RI_THRESHOLD = 0.70
-    K = 5 # 交差検証の分割数
-    output_csv_path = (f"outputs/results_csv/ws2/ws2_simulation_result_rc{RC_THRESHOLD}_ri{RI_THRESHOLD}.csv")
-
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", required=True, help="Path to WS2 processed CSVs")
+    parser.add_argument("--rc", type=float, default=0.80)
+    parser.add_argument("--ri", type=float, default=0.70)
+    parser.add_argument("--k", type=int, default=5)
+    parser.add_argument("--output", type=str, default=None)
+    
+    args = parser.parse_args()
     results_ws2 = run_simulations(
-        model_name=MODEL_NAME,
-        dir_ws2=DIR_WS2,
-        RC_THRESHOLD=RC_THRESHOLD,
-        RI_THRESHOLD=RI_THRESHOLD,
-        K=K,
-        output_csv_path=output_csv_path
+        model_name="logistic_regression",
+        dir_ws2=args.data_dir,
+        RC_THRESHOLD=args.rc,
+        RI_THRESHOLD=args.ri,
+        K=args.k,
+        output_csv_path=args.output
     )
