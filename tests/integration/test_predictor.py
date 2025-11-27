@@ -8,7 +8,7 @@ from adaptive_self_assessment.spec import SPEC_WS1, SPEC_WS2, get_spec_cols
 from adaptive_self_assessment.predictor import predict_item_ws1, predict_item_ws2, predict_overall_ws1, predict_overall_ws2
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/sample/ws1_sample.csv",
+    "data/sample/ws1/ws1_data_sample.csv",
 ])
 def test_predict_item_ws1(ws1_path):
     print("=== Item Prediction Test in WS1 ===")
@@ -64,7 +64,7 @@ def test_predict_item_ws1(ws1_path):
     assert C == []
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/sample/ws2_sample.csv",
+    "data/sample/ws2/ws2_data_sample.csv",
 ])
 def test_predict_item_ws2(ws2_path):
     print("=== Item Prediction Test in WS2 ===")

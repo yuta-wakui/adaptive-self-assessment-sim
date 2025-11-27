@@ -8,7 +8,7 @@ from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/sample/ws1_sample.csv",
+    "data/sample/ws1/ws1_data_sample.csv",
 ])
 def test_run_ws1_simulation(ws1_path):
     print("=== WS1 Simulation Test ===")
@@ -60,7 +60,7 @@ def test_run_ws1_simulation(ws1_path):
     print("WS1 simulation Results: ", sim_results)
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/sample/ws2_sample.csv",
+    "data/sample/ws2/ws2_data_sample.csv",
 ])
 def test_run_ws2_simulation(ws2_path):
     print("=== WS2 Simulation Test ===")
