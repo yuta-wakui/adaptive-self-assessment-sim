@@ -5,18 +5,17 @@ build-backend = "hatchling.build"
 [project]
 name = "adaptive-self-assessment"
 version = "0.0.1"
-description = "A simulation framework for machine-learning–driven adaptive self-assessment"
+description = "A simulation framework for machine-learning-driven adaptive self-assessment"
 readme = "README.md"
-authors = [{ name = "Yuta Wakui", email = "w2531163@gl.cc.uec.ac.jp" }]
+authors = [
+  { name = "Yuta Wakui", email = "w2531163@gl.cc.uec.ac.jp" }
+]
 requires-python = ">=3.10"
 license = { text = "MIT" }
-urls = {
-  "Homepage" = "https://github.com/yuta-wakui/adaptive-self-assessment-sim"
-}
 
 dependencies = [
-  "pandas>=2.0.0",
-  "numpy>=2.0.0",
+  "numpy>=2.3.0",
+  "pandas>=2.2.3",
   "scikit-learn>=1.6.0",
   "tqdm>=4.66.0",
   "pyyaml>=6.0",
@@ -24,24 +23,13 @@ dependencies = [
   "matplotlib>=3.7.0"
 ]
 
-keywords = [
-  "machine-learning",
-  "adaptive-testing",
-  "self-assessment",
-  "education-data",
-  "simulation"
-]
-
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-]
-
 [project.optional-dependencies]
 dev = [
   "pytest>=7.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yuta-wakui/adaptive-self-assessment-sim"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/adaptive_self_assessment"]
