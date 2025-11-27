@@ -10,6 +10,12 @@ The framework supports simulations for both:
 ## Description
 
 ## Requirement
+### Clone repositories
+```bash
+git clone https://github.com/yuta-wakui/adaptive-self-assessment-sim.git
+cd adaptive-self-assessment
+```
+
 ### (Recommended) Create a virtual environment
 ```bash
 python -m venv venv
@@ -29,19 +35,21 @@ pip install -e .
 Run adaptive simulation using single-session datasets:
 ```bash
 python scripts/run_ws1_sim.py \
-  --data_dir data/sample/ws1_sample.csv \
+  --data_dir data/sample/ws1 \
   --rc 0.80 \
   --ri 0.70 \
-  --k 5
+  --k 5 \
+  --outputs "outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv"
 ```
 ### WS2 Simulation (Two-session)
 Run adaptive simulation using two-session datasets:
 ```bash
 python scripts/run_ws2_sim.py \
-  --data_dir data/sample/ws1_sample.csv \
+  --data_dir data/sample/ws2 \
   --rc 0.80 \
   --ri 0.70 \
-  --k 5
+  --k 5 \
+  --outputs "outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv"
 ```
 ### Threshold Comparison (RC × RI)
 Automatically run simulations for multiple confidence thresholds:
