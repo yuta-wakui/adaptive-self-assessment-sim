@@ -140,7 +140,7 @@ def run_simulations(
     if output_csv_path is None:
         rc_str = str(RC_THRESHOLD).replace(".", "p")
         ri_str = str(RI_THRESHOLD).replace(".", "p")
-        output_csv_path = f"outputs/results_csv/ws2/ws2_results_rc{rc_str}_ri{ri_str}_{run_id}.csv"
+        output_csv_path = f"outputs/results_csv/ws2/sim_results/ws2_results_rc{rc_str}_ri{ri_str}_{run_id}.csv"
 
     dirpath = os.path.dirname(output_csv_path)
     if dirpath:

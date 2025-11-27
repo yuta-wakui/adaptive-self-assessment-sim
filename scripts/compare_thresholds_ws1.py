@@ -52,7 +52,7 @@ def compare_thresholds_ws1(
             RC_THRESHOLD=rc,
             RI_THRESHOLD=ri,
             K=K,
-            output_csv_path=f"outputs/results_csv/ws1/ws1_simulation_result_rc{rc}_ri{ri}.csv"
+            output_csv_path=f"outputs/results_csv/ws1/sim_results/ws1_simulation_result_rc{rc}_ri{ri}.csv"
         )
 
         all_results.append(df_result)
@@ -62,7 +62,7 @@ def compare_thresholds_ws1(
 
     # 結果の保存
     if output_csv_path is None:
-        output_csv_path = "outputs/results_csv/ws1/ws1_threshold_comparison_results.csv"
+        output_csv_path = "outputs/results_csv/ws1/cmp_thresholds/ws1_threshold_comparison_results.csv"
 
     os.makedirs("outputs/results_csv/ws1", exist_ok=True)
     df_all.to_csv(output_csv_path, index=False)
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     RC_VALUES = [0.70, 0.75, 0.80, 0.85, 0.90]  # 補完の信頼度閾値のリスト
     RI_VALUES = [0.60, 0.65, 0.70, 0.75, 0.80]  # 総合評価の信頼度閾値のリスト
     K = 5 # 交差検証の分割数
-    output_csv_path = "outputs/results_csv/ws1/ws1_threshold_comparison_results.csv"
+    output_csv_path = "outputs/results_csv/ws1/cmp_thresholds/ws1_threshold_comparison_results.csv"
 
     comparison_result = compare_thresholds_ws1(
         model_name=MODEL_NAME,
