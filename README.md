@@ -13,7 +13,7 @@ The framework supports simulations for both:
 ### Clone repositories
 ```bash
 git clone https://github.com/yuta-wakui/adaptive-self-assessment-sim.git
-cd adaptive-self-assessment
+cd adaptive-self-assessment-sim
 ```
 
 ### (Recommended) Create a virtual environment
@@ -39,7 +39,7 @@ python scripts/run_ws1_sim.py \
   --rc 0.80 \
   --ri 0.70 \
   --k 5 \
-  --outputs "outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv"
+  --output "outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv"
 ```
 ### WS2 Simulation (Two-session)
 Run adaptive simulation using two-session datasets:
@@ -49,17 +49,27 @@ python scripts/run_ws2_sim.py \
   --rc 0.80 \
   --ri 0.70 \
   --k 5 \
-  --outputs "outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv"
+  --output "outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv"
 ```
 ### Threshold Comparison (RC × RI)
 Automatically run simulations for multiple confidence thresholds:
 #### WS1
 ```bash
-python scripts/compare_thresholds_ws1.py
+python scripts/compare_thresholds_ws1.py \
+  --data_dir data/sample/ws1 \
+  --rc_values 0.7 0.8 0.9 \
+  --ri_values 0.6 0.7 0.8 \
+  --k 5 \
+  --output outputs/results_csv/ws1/cmp_thresholds/ws1_cmp_rc_ri_grid.csv
 ```
 #### WS2
 ```bash
-python scripts/compare_thresholds_ws2.py
+python scripts/compare_thresholds_ws2.py \
+  --data_dir data/sample/ws1 \
+  --rc_values 0.7 0.8 0.9 \
+  --ri_values 0.6 0.7 0.8 \
+  --k 5 \
+  --output outputs/results_csv/ws2/cmp_thresholds/ws2_cmp_rc_ri_grid.csv
 ```
 ## Testing
 Rim all unit and integration tests:

@@ -1,8 +1,9 @@
 import os
 import pandas as pd
+import argparse
 from itertools import product
 
-from scripts.run_ws2_sim import run_simulations as run_ws2_sim
+from run_ws2_sim import run_simulations as run_ws2_sim
 
 def compare_thresholds_ws2(
         model_name: str = "logistic_regression",
@@ -45,6 +46,12 @@ def compare_thresholds_ws2(
     for rc, ri in product(RC_VALUES, RI_VALUES):
         print(f"=== Running WS2 Simulation for RC_THRESHOLD={rc}, RI_THRESHOLD={ri} ===")
 
+        # ログファイル名用の閾値文字列
+        rc_str = str(rc).replace(".", "p")
+        ri_str = str(ri).replace(".", "p")
+
+        sim_output_path = f"outputs/results_csv/ws2/sim_results/ws2_simulation_result_rc{rc_str}_ri{ri_str}.csv"
+
         # シミュレーションの実行
         df_result = run_ws2_sim(
             model_name=model_name,
@@ -52,7 +59,7 @@ def compare_thresholds_ws2(
             RC_THRESHOLD=rc,
             RI_THRESHOLD=ri,
             K=K,
-            output_csv_path=f"outputs/results_csv/ws2/sim_results/ws2_simulation_result_rc{rc}_ri{ri}.csv"
+            output_csv_path=sim_output_path
         )
 
         all_results.append(df_result)
@@ -64,7 +71,10 @@ def compare_thresholds_ws2(
     if output_csv_path is None:
         output_csv_path = "outputs/results_csv/ws2/cmp_thresholds/ws2_threshold_comparison_results.csv"
 
-    os.makedirs("outputs/results_csv/ws2", exist_ok=True)
+    output_dir = os.path.dirname(output_csv_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
     df_all.to_csv(output_csv_path, index=False)
 
     print(f"Saved WS2 threshold comparison to : {output_csv_path}")
@@ -72,19 +82,24 @@ def compare_thresholds_ws2(
     return df_all
 
 if __name__ == "__main__":
-    # シミュレーションの環境設定
-    MODEL_NAME = "logistic_regression" # 総合評価推定に使用するモデル
-    DIR_WS2 = "data/processed/w2-synthetic_20250326_1300_processed"
-    RC_VALUES = [0.70, 0.75, 0.80, 0.85, 0.90]  # 補完の信頼度閾値のリスト
-    RI_VALUES = [0.60, 0.65, 0.70, 0.75, 0.80]  # 総合評価の信頼度閾値のリスト
-    K = 5 # 交差検証の分割数
-    output_csv_path = "outputs/results_csv/ws2/cmp_thresholds/ws2_threshold_comparison_results.csv"
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", required=True, help="Path to WS2 processed CSVs")
+    parser.add_argument("--rc_values", nargs="+", type=float, required=True, help="List of RC threshold values")
+    parser.add_argument("--ri_values", nargs="+", type=float, required=True, help="List of RI threshold values")
+    parser.add_argument("--k", type=int, default=5, help="Number of folds for cross-validation")
+    parser.add_argument("--output", type=str, default=None, help="Output CSV path for comparison results")
+
+    args = parser.parse_args()
+
+    # 総合評価推定に使用するモデル
+    MODEL_NAME = "logistic_regression" 
 
     comparison_result = compare_thresholds_ws2(
         model_name=MODEL_NAME,
-        dir_ws2=DIR_WS2,
-        RC_VALUES=RC_VALUES,
-        RI_VALUES=RI_VALUES,
-        K=K,
-        output_csv_path = output_csv_path
+        dir_ws2=args.data_dir,
+        RC_VALUES=args.rc_values,
+        RI_VALUES=args.ri_values,
+        K=args.k,
+        output_csv_path = args.output
     )    
