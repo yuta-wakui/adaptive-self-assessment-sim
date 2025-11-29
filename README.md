@@ -1,13 +1,75 @@
 # adaptive-self-assessment-sim
 
 ## Overview
-This repository simulates **a machine-learning-driven adaptive self-assessment system** that presents evaluation items dynamically and aims to achieve the same assessment accuracy with fewer evaluation items compared to using the full-length items.
+This repository provides a simulation framework for a **machine-learning-based adaptive self-assessment system**.  
+The system dynamically selects or complements checklist items based on response patterns, aiming to **achieve the same assessment accuracy with fewer items** compared to using the full checklist.
 
-The framework supports simulations for both:
-- **WS1** — Single-session self-assessment (one assessment session)
-- **WS2** — Two-session self-assessment (previous + current session)
+The framework supports:
+- **WS1 — Single-session self-assessment**
+- **WS2 — Two-session self-assessment (previous + current session)**
 
-## Description
+## Motivation
+An inter-subjective assessment using rubrics and checklists can promote self-understanding and continuous learner growth.  
+However, a major problem is **assessment fatigue caused by the large number of evaluation items**, which can reduce motivation and result quality.
+
+To address this issue, this project simulates an **adaptive self-assessment mechanism** that:
+- presents items sequentially based on the learner’s response history(currently random selection is planned),
+- complements unanswered items using machine learning when reliability is sufficient,
+- and terminates once the predicted overall score reaches a required confidence level.
+
+The objective is to **reduce the number of required items without degrading assessment accuracy**.
+
+## Adaptive-self-assessment Algorithm
+The system sequentially queries items and uses machine-learning-based completion to reduce the number of required responses while maintaining assessment accuracy. The decision process is controlled by two confidence thresholds:
+
+- **Rc: threshold for complementing remaining items**
+- **Ri: threshold for final score estimation**
+
+Pseudo-code below summarizes the adaptive evaluation process:
+
+```pseudo
+Inputs:
+    I      : full set of checklist items
+    Pra    : previous overall score (WS2 only, else null)
+    Pca    : previous checklist results (WS2 only, else null)
+    Rc     : confidence threshold for item-level completion
+    Ri     : confidence threshold for final score prediction
+
+Outputs:
+    pred_R  : predicted overall score
+    Ca      : final set of answered or complemented items
+
+Initialization:
+    C  ← I                         # unanswered item set
+    Ca ← {}                        # answered or complemented item list
+
+Loop:
+    while C is not empty:
+        ci ← select_next_item(C)                     # e.g., random, entropy-based, or model-guided
+        ans ← query_response(ci)                       # ask the user and record response
+        Ca[ci] = ans
+        remove ci from C
+
+        # predict remaining items
+        (pred_C, conf_C) ← completion_model.predict(C, Ca, Pra, Pca)
+
+        for each j in C:
+            if conf_C[j] ≥ Rc:
+                Ca[j] = pred_C[j]
+                remove j from C
+
+        if C is empty:
+            break
+
+    # after all checklist scores are obtained (answer or completion)
+    (pred_R, conf_R) ← overall_estimator.predict(Ca, Pra, Pca)
+    
+    if conf_R >= Ri:
+        # if confidence is insufficient, additional human evaluation is required
+        pred_R = request_manual_rating()
+
+Return pred_R, Ca
+```
 
 ## Requirement
 ### Clone repositories
@@ -39,7 +101,7 @@ python scripts/run_ws1_sim.py \
   --rc 0.80 \
   --ri 0.70 \
   --k 5 \
-  --output "outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv"
+  --output outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv
 ```
 ### WS2 Simulation (Two-session)
 Run adaptive simulation using two-session datasets:
@@ -49,7 +111,7 @@ python scripts/run_ws2_sim.py \
   --rc 0.80 \
   --ri 0.70 \
   --k 5 \
-  --output "outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv"
+  --output outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv
 ```
 ### Threshold Comparison (RC × RI)
 Automatically run simulations for multiple confidence thresholds:
@@ -65,7 +127,7 @@ python scripts/compare_thresholds_ws1.py \
 #### WS2
 ```bash
 python scripts/compare_thresholds_ws2.py \
-  --data_dir data/sample/ws1 \
+  --data_dir data/sample/ws2 \
   --rc_values 0.7 0.8 0.9 \
   --ri_values 0.6 0.7 0.8 \
   --k 5 \
