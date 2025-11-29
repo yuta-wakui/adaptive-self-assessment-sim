@@ -58,10 +58,7 @@ Loop:
                 Ca[j] = pred_C[j]
                 remove j from C
 
-        if C is empty:
-            break
-
-    # after all checklist scores are obtained (answer or completion)
+    # after all checklist scores are obtained (answer or completion), predict overall score using Ca, Pra, Pca
     (pred_R, conf_R) ← overall_estimator.predict(Ca, Pra, Pca)
     
     if conf_R >= Ri:
