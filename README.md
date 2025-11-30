@@ -68,7 +68,7 @@ Loop:
 Return pred_R, Ca
 ```
 
-## Requirement
+## Requirements
 ### Clone repositories
 ```bash
 git clone https://github.com/yuta-wakui/adaptive-self-assessment-sim.git
@@ -81,11 +81,11 @@ python -m venv venv
 source venv/bin/activate # Windows: venv\Scripts\activate
 ```
 ### Install dependencies
-install all required dependencies:
+using requirements file:
 ```bash
 pip install -r requirements.txt
 ```
-Or install via the package configuration:
+Or install via the package configuration (recommend for development):
 ```bash
 pip install -e .
 ```
@@ -154,8 +154,29 @@ python scripts/compare_thresholds_ws2.py \
   --k 5 \
   --output outputs/results_csv/ws2/cmp_thresholds/ws2_cmp_rc_ri_grid.csv
 ```
+
+### Library usage (Python API)
+You can also run simulations directly from Python after installing the package:
+```python
+import pandas as pd
+from adaptive_self_assessment import run_ws1_simulation
+
+train_df = pd.read_csv("data/sample/ws1/ws1_data_sample.csv")
+test_df = train_df.sample(frac=0.2, random_state=42)
+train_df = train_df.drop(test_df.index)
+
+results = run_ws1_simulation(
+    RC_THRESHOLD=0.80,
+    RI_THRESHOLD=0.70,
+    skill_name="information_literacy",
+    train_df=train_df,
+    test_df=test_df,
+    model_type="logistic_regression",
+)
+print(results)
+```
 ## Testing
-Rim all unit and integration tests:
+Run all unit and integration tests:
 ```bash
 pytest -s
 ```

@@ -127,7 +127,7 @@ def test_predict_item_ws2(ws2_path):
     assert C == []
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/sample/ws1_sample.csv",
+    "data/sample/ws1_data_sample.csv",
 ])
 def test_predict_overall_ws1(ws1_path):
     print("=== Overall Assessment Prediction Test in WS1 ===")
@@ -170,7 +170,7 @@ def test_predict_overall_ws1(ws1_path):
     assert 0.0 <= confidences <= 1.0
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/sample/ws2_sample.csv",
+    "data/sample/ws2_data_sample.csv",
 ])
 def test_predict_overall_ws2(ws2_path):
     print("=== Overall Assessment Prediction Test in WS2 ===")

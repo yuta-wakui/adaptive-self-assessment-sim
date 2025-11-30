@@ -127,7 +127,7 @@ python scripts/run_ws2_sim.py \
 複数の閾値の組み合わせに対してグリッドリサーチでシミュレーションを実行します：
 
 #### Command-line Arguments
-The simulation scripts accept the following main arguments:
+以下の引数はスクリプト実行時に指定できます:
 
 | Argument     | Meaning                                           | Example                                                 |
 | ------------ | ------------------------------------------------- | ------------------------------------------------------- |
@@ -155,6 +155,33 @@ python scripts/compare_thresholds_ws2.py \
   --k 5 \
   --output outputs/results_csv/ws2/cmp_thresholds/ws2_cmp_rc_ri_grid.csv
 ```
+
+### ライブラリとしての利用例（Python API）
+スクリプトを使わず、Pythonから直接シミュレーションを実行することも出来ます：
+```python
+import pandas as pd
+from adaptive_self_assessment import run_ws1_simulation
+
+# データの読み込み
+train_df = pd.read_csv("data/sample/ws1/ws1_data_sample.csv")
+
+# データを訓練用とテスト用に分割（例：80%訓練 / 20%テスト）
+test_df = train_df.sample(frac=0.2, random_state=42)
+train_df = train_df.drop(test_df.index)
+
+# シミュレーションの実行
+results = run_ws1_simulation(
+    RC_THRESHOLD=0.80,
+    RI_THRESHOLD=0.70,
+    skill_name="information_literacy",
+    train_df=train_df,
+    test_df=test_df,
+    model_type="logistic_regression",
+)
+
+print(results)
+```
+
 ## テスト
 単体テスト・結合テストを実行:
 ```bash
