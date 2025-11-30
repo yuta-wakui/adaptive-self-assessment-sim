@@ -12,7 +12,7 @@
 ルーブリックやチェックリストを用いた**間主観的評価（inter-subjective assessment）**は、学習者の自己理解や振り返りを促進し、継続的な成長を支援します。
 一方で現場では、**評価項目が多いことによる回答負担・評価疲れ**が生じやすく、モチベーションや回答の質の低下が課題となっています。
 
-そこで本プロジェクトでは、回答パターンに応じた項目選択と機械学習による回答補完を組み合わせることで、**「必要最低限の回答で、従来と同等の精度の総合評価を実現する」**  
+そこで本プロジェクトでは、回答パターンに応じた項目選択と機械学習による回答補完を組み合わせることで、**「必要最低限の回答で、すべての項目を使った場合と同等の精度の総合評価を実現する」**  
 ことを目指しています。
 
 本システムは将来的に、教育現場・企業研修・自己評価ツールなどへの応用を想定しています。
@@ -157,7 +157,7 @@ python scripts/compare_thresholds_ws2.py \
 ```
 
 ### ライブラリとしての利用例（Python API）
-スクリプトを使わず、Pythonから直接シミュレーションを実行することも出来ます：
+専用のスクリプトを使わずに、外部のPythonコードから直接シミュレーションを実行することも可能です。：
 ```python
 import pandas as pd
 from adaptive_self_assessment import run_ws1_simulation
@@ -173,7 +173,6 @@ train_df = train_df.drop(test_df.index)
 results = run_ws1_simulation(
     RC_THRESHOLD=0.80,
     RI_THRESHOLD=0.70,
-    skill_name="information_literacy",
     train_df=train_df,
     test_df=test_df,
     model_type="logistic_regression",
