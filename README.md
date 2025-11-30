@@ -9,13 +9,13 @@ The framework supports:
 - **WS2 — Two-session self-assessment (previous + current session)**
 
 ## Motivation
-An inter-subjective assessment using rubrics and checklists can promote self-understanding and continuous learner growth.  
-However, a major problem is **assessment fatigue caused by the large number of evaluation items**, which can reduce motivation and result quality.
+Inter-subjective assessment using rubrics and checklists can promote self-understanding and continuous learner growth.  
+However, a major problem is **assessment fatigue caused by the large number of evaluation items**, which can decrease motivation and result quality.
 
 To address this issue, this project simulates an **adaptive self-assessment mechanism** that:
-- presents items sequentially based on the learner’s response history(currently random selection is planned),
+- presents items sequentially based on the learner’s response history(currently random selection is implemented),
 - complements unanswered items using machine learning when reliability is sufficient,
-- and terminates once the predicted overall score reaches a required confidence level.
+- and, once all checklist items are answered or complemented, predict a final rubric-based overall score using the completed set of items.
 
 The objective is to **reduce the number of required items without degrading assessment accuracy**.
 
@@ -33,24 +33,24 @@ Inputs:
     Pra    : previous overall score (WS2 only, else null)
     Pca    : previous checklist results (WS2 only, else null)
     Rc     : confidence threshold for item-level completion
-    Ri     : confidence threshold for final score prediction
+    Ri     : confidence threshold for overall score prediction
 
 Outputs:
     pred_R  : predicted overall score
     Ca      : final set of answered or complemented items
 
 Initialization:
-    C  ← I                         # unanswered item set
-    Ca ← {}                        # answered or complemented item list
+    C  ← I  # unanswered item set
+    Ca ← {} # answered or complemented item list
 
 Loop:
     while C is not empty:
-        ci ← select_next_item(C)                     # e.g., random, entropy-based, or model-guided
-        ans ← query_response(ci)                       # ask the user and record response
+        ci ← select_next_item(C)   # e.g., random, entropy-based, or model-guided
+        ans ← query_response(ci)  # ask the user and record response
         Ca[ci] = ans
         remove ci from C
 
-        # predict remaining items
+        # predict unanswered items
         (pred_C, conf_C) ← completion_model.predict(C, Ca, Pra, Pca)
 
         for each j in C:
@@ -90,7 +90,19 @@ Or install via the package configuration:
 pip install -e .
 ```
 ## Usage
-### WS1 Simulation (Single-session)
+### Simulation
+#### Command-line Arguments
+The simulation scripts accept the following main arguments:
+
+| Argument     | Meaning                                           | Example                                                 |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------- |
+| `--data_dir` | Directory containing the dataset (WS1 or WS2)     | `data/sample/ws1`                                       |
+| `--rc`       | Confidence threshold for item-level completion    | 0.80                                                  |
+| `--ri`       | Confidence threshold for overall score estimation | 0.70                                                  |
+| `--k`        | Number of cross-validation folds                  | 5                                                    |
+| `--output`   | Path to save simulation results                   | `outputs/results_csv/ws1/sim_results/rc0p80_ri0p70.csv` |
+
+#### WS1 Simulation (Single-session)
 Run adaptive simulation using single-session datasets:
 ```bash
 python scripts/run_ws1_sim.py \
@@ -100,7 +112,7 @@ python scripts/run_ws1_sim.py \
   --k 5 \
   --output outputs/results_csv/ws1/sim_results/ws1_results_rc0p80_ri0p70_date.csv
 ```
-### WS2 Simulation (Two-session)
+#### WS2 Simulation (Two-session)
 Run adaptive simulation using two-session datasets:
 ```bash
 python scripts/run_ws2_sim.py \
@@ -111,7 +123,19 @@ python scripts/run_ws2_sim.py \
   --output outputs/results_csv/ws2/sim_results/ws2_results_rc0p80_ri0p70_date.csv
 ```
 ### Threshold Comparison (RC × RI)
-Automatically run simulations for multiple confidence thresholds:
+Automatically run simulations for multiple confidence thresholds.
+
+#### Command-line Arguments
+The simulation scripts accept the following main arguments:
+
+| Argument     | Meaning                                           | Example                                                 |
+| ------------ | ------------------------------------------------- | ------------------------------------------------------- |
+| `--data_dir` | Directory containing the dataset (WS1 or WS2)     | `data/sample/ws1`                                       |
+| `--rc_values`       | List of confidence thresholds for item-level completion    | 0.7 0.8 0.9                                    |
+| `--ri_values`       | List of confidence thresholds for overall score estimation | 0.6 0.7 0.8                                                 |
+| `--k`        | Number of cross-validation folds                  | 5                                                   |
+| `--output`   | Path to save simulation results                   | outputs/results_csv/ws1/cmp_thresholds/cmp_results.csv |
+
 #### WS1
 ```bash
 python scripts/compare_thresholds_ws1.py \
