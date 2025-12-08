@@ -1,0 +1,48 @@
+# Adaptive Self-Assessment Config File
+
+# 実行モード
+mode: "ws1" # ws1 = 1回分データ / ws2 = 2回分データ
+
+# モデル設定
+model:
+  type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
+  params: {} # モデルパラメータ（任意）
+
+# 信頼度閾値
+thresholds:
+  RC: 0.80 # 補完の信頼度閾値
+  RI: 0.70 # 総合評価推定の信頼度閾値
+
+# データ設定
+data:
+  input_dir: "data/sample/ws1" # 使用するデータディレクトリ
+  id_col: "ID" # 識別子列名
+  # WS2のみ
+  pra_col: null # 過去の総合評価（WS1の場合はnull）
+  pca_cols: [] # 過去の回答列（WS1の場合は空リスト）
+  # WS1/WS2共通
+  ra_col: null # 総合評価列
+  ca_cols: [] # 質問項目列
+  ignore_items: [] # 無視する列名
+
+# クロスバリデーション
+cv:
+  folds: 5 # 分割数
+  stratified: true # 層化サンプリングの有無
+  random_seed: 42 # 乱数シード
+
+# 質問項目の選択方法
+question_selection:
+  strategy: "random" # 選択戦略（現在は"random"のみ対応）
+
+# ログ設定
+logging:
+  save_logs: true # ログを保存するかどうか
+  log_dir: "outputs/logs/logs_test" # ログ保存ディレクトリ
+  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
+
+results:
+  save_csv: true # 結果をCSVで保存するかどうか
+  output_dir: "outputs/results_csv" # 結果出力ディレクトリ
+  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
+  filename_suffix: "test" # 結果ファイル名のサフィックス
