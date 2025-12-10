@@ -15,15 +15,24 @@ thresholds:
 
 # データ設定
 data:
-  input_dir: "data/sample/ws1" # 使用するデータディレクトリ
-  id_col: "ID" # 識別子列名
-  # WS2のみ
-  pra_col: null # 過去の総合評価（WS1の場合はnull）
-  pca_cols: [] # 過去の回答列（WS1の場合は空リスト）
-  # WS1/WS2共通
-  ra_col: null # 総合評価列
-  ca_cols: [] # 質問項目列
-  ignore_items: [] # 無視する列名
+  # 共通設定
+  common: 
+    input_csv_file: "data/sample/ws1/ws1_data_sample.csv" # 使用するデータのファイル名（csv形式）
+    "skill-name": "sample" # 評価する能力名
+    id_col: "ID" # 識別子列名
+    ignore_items: ["reflection-length", "w3-reflection-length", "w4-reflection-length"] # 無視する列名
+  # １回分のデータ（WS1）用
+  ws1:
+    ra_col: "assessment-result" # 総合評価列
+    ca_cols: ["item-1", "item-2", "item-3", "item-4", "item-5", "item-6", "item-7", "item-8", "item-9", "item-10", "item-11", "item-12", "item-13", "item-14", "item-15"] # 質問項目列
+  # ２回分のデータ（WS2）用
+  ws2:
+    pra_col: "w3-assessment-result" # 過去の総合評価列
+    pca_cols: ["w3-1", "w3-2", "w3-3", "w3-4", "w3-5", "w3-6", "w3-7", "w3-8", "w3-9", "w3-10", "w3-11", "w3-12", "w3-13", "w3-14", "w3-15"] # 過去の回答列
+    ra_col: "w4-assessment-result" # 今回の総合評価列
+    ca_cols: ["w4-1", "w4-2", "w4-3", "w4-4", "w4-5", "w4-6", "w4-7", "w4-8", "w4-9", "w4-10", "w4-11", "w4-12", "w4-13", "w4-14", "w4-15"] # 今回の回答列
+
+  
 
 # クロスバリデーション
 cv:
