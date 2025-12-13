@@ -14,6 +14,8 @@ def test_load_config():
     assert "model" in cfg
     assert "thresholds" in cfg
     assert "data" in cfg
+    assert "cv" in cfg
+    assert "question_selection" in cfg
     assert "logging" in cfg
     assert "results" in cfg
 

@@ -24,13 +24,8 @@ def test_run_ws1_simulation(ws1_path):
     
     # シミュレーションの実行
     sim_results = run_ws1_simulation(
-        RC_THRESHOLD=0.80,
-        RI_THRESHOLD=0.70,
-        skill_name="sample",
-        model_type="logistic_regression",
         train_df=df_ws1_train,
         test_df=df_ws1_test,
-        logs_path="outputs/logs/test_logs/ws1_simulation_test_logs.csv"
     )
 
     # 結果の検証
@@ -76,13 +71,8 @@ def test_run_ws2_simulation(ws2_path):
     
     # シミュレーションの実行
     sim_results = run_ws2_simulation(
-        RC_THRESHOLD=0.8,
-        RI_THRESHOLD=0.7,
-        skill_name="sample",
-        model_type="logistic_regression",
         train_df=df_ws2_train,
         test_df=df_ws2_test,
-        logs_path="outputs/logs/test_logs/ws2_simulation_test_logs.csv"
     )
 
     # 結果の検証

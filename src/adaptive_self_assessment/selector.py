@@ -17,7 +17,7 @@ def set_selector_seed(seed: int) -> None:
 
 def select_question(C: List[str], strategy: str = "random") -> str:
     """
-    質問項目をランダムに選択する関数
+    質問項目を選択する関数
     
     Parameters:
     ----------

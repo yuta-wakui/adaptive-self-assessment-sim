@@ -4,8 +4,20 @@ import numpy as np
 import pytest
 
 from adaptive_self_assessment.selector import select_question, set_selector_seed
-from adaptive_self_assessment.spec import SPEC_WS1, SPEC_WS2, get_spec_cols
+from adaptive_self_assessment.config import load_config
 from adaptive_self_assessment.predictor import predict_item_ws1, predict_item_ws2, predict_overall_ws1, predict_overall_ws2
+
+def _load_data_config():
+    """
+    設定ファイルからデータ関連の設定を読み込む内部関数
+    Returns:
+    -------
+        data_cfg: Dict[str, any]
+            データ関連の設定内容
+    """
+    cfg = load_config()
+    data_cfg = cfg.get("data", {})
+    return data_cfg
 
 @pytest.mark.parametrize("ws1_path", [
     "data/sample/ws1/ws1_data_sample.csv",
@@ -18,7 +30,11 @@ def test_predict_item_ws1(ws1_path):
     df_w1 = pd.read_csv(ws1_path)
 
     # 列名の取得
-    _, _, ca_cols_ws1, _, _ = get_spec_cols(df_w1, SPEC_WS1)
+    data_cfg = _load_data_config()
+    ca_cols_ws1 = data_cfg.get("ws1", {}).get("ca_cols", [])
+
+    if not ca_cols_ws1:
+        raise ValueError("ca_cols must be specified in config for WS1.")
 
     # テストするユーザーIDをランダムに選択
     use_id = np.random.choice(df_w1.index)
@@ -74,7 +90,13 @@ def test_predict_item_ws2(ws2_path):
     df_w2 = pd.read_csv(ws2_path)
 
     # 列名の取得
-    pra_col_ws2, pca_cols_ws2, ca_cols_ws2, _, _ = get_spec_cols(df_w2, SPEC_WS2)
+    data_cfg = _load_data_config()
+    pra_col_ws2 = data_cfg.get("ws2", {}).get("pra_col", "")
+    pca_cols_ws2 = data_cfg.get("ws2", {}).get("pca_cols", [])
+    ca_cols_ws2 = data_cfg.get("ws2", {}).get("ca_cols", [])
+
+    if not pra_col_ws2 or not pca_cols_ws2 or not ca_cols_ws2:
+        raise ValueError("pra_col, pca_cols and ca_cols must be specified in config for WS2.")
 
     # テストするユーザーIDをランダムに選択
     use_id = np.random.choice(df_w2.index)
@@ -127,7 +149,7 @@ def test_predict_item_ws2(ws2_path):
     assert C == []
 
 @pytest.mark.parametrize("ws1_path", [
-    "data/sample/ws1_data_sample.csv",
+    "data/sample/ws1/ws1_data_sample.csv",
 ])
 def test_predict_overall_ws1(ws1_path):
     print("=== Overall Assessment Prediction Test in WS1 ===")
@@ -137,7 +159,12 @@ def test_predict_overall_ws1(ws1_path):
     df_w1 = pd.read_csv(ws1_path)
 
     # 列名の取得
-    _, _, ca_cols_ws1, ra_col_ws1, _ = get_spec_cols(df_w1, SPEC_WS1)
+    data_cfg = _load_data_config()
+    ca_cols_ws1 = data_cfg.get("ws1", {}).get("ca_cols", [])
+    ra_col_ws1 = data_cfg.get("ws1", {}).get("ra_col")
+
+    if not ca_cols_ws1 or ra_col_ws1 is None:
+        raise ValueError("ca_cols and ra_col must be specified in config for WS1.")
 
     # テストするユーザーIDをランダムに選択
     used_id = np.random.choice(df_w1.index)
@@ -159,7 +186,6 @@ def test_predict_overall_ws1(ws1_path):
     preds, confidences = predict_overall_ws1(
         Ca=Ca,
         df_train=df_w1_train,
-        model_name="logistic_regression",
         random_state=42
     )
 
@@ -170,7 +196,7 @@ def test_predict_overall_ws1(ws1_path):
     assert 0.0 <= confidences <= 1.0
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/sample/ws2_data_sample.csv",
+    "data/sample/ws2/ws2_data_sample.csv",
 ])
 def test_predict_overall_ws2(ws2_path):
     print("=== Overall Assessment Prediction Test in WS2 ===")
@@ -180,7 +206,14 @@ def test_predict_overall_ws2(ws2_path):
     df_w2 = pd.read_csv(ws2_path)
 
     # 列名の取得
-    pra_col_ws2, pca_cols_ws2, ca_cols_ws2, ra_col_ws2, _ = get_spec_cols(df_w2, SPEC_WS2)
+    data_cfg = _load_data_config()
+    pra_col_ws2 = data_cfg.get("ws2", {}).get("pra_col", "")
+    pca_cols_ws2 = data_cfg.get("ws2", {}).get("pca_cols", [])
+    ca_cols_ws2 = data_cfg.get("ws2", {}).get("ca_cols", [])
+    ra_col_ws2 = data_cfg.get("ws2", {}).get("ra_col")
+
+    if not pra_col_ws2 or not pca_cols_ws2 or not ca_cols_ws2 or ra_col_ws2 is None:
+        raise ValueError("pra_col, pca_cols, ca_cols and ra_col must be specified in config for WS2.")
 
     # テストするユーザーIDをランダムに選択
     used_id = np.random.choice(df_w2.index)
@@ -208,7 +241,6 @@ def test_predict_overall_ws2(ws2_path):
         Pca=Pca,
         Ca=Ca,
         df_train=df_w2_train,
-        model_name="logistic_regression",
         random_state=42
     )
 

@@ -1,12 +1,16 @@
 # Adaptive Self-Assessment Config File
 
 # 実行モード
-mode: "ws1" # ws1 = 1回分データ / ws2 = 2回分データ
+mode: "ws2" # ws1 = 1回分データ / ws2 = 2回分データ
 
 # モデル設定
 model:
-  type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
-  params: {} # モデルパラメータ（任意）
+  item:
+    type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
+    params: {} # モデルパラメータ（任意）
+  overall:
+    type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
+    params: {} # モデルパラメータ（任意）
 
 # 信頼度閾値
 thresholds:
@@ -17,26 +21,24 @@ thresholds:
 data:
   # 共通設定
   common: 
-    input_csv_file: "data/sample/ws1/ws1_data_sample.csv" # 使用するデータのファイル名（csv形式）
-    "skill-name": "sample" # 評価する能力名
+    input_path: "data/sample/ws2/ws2_data_sample2.csv" # 使用するデータのファイルパス（csv形式）
+    skill-name: "sample2" # 評価する能力名
     id_col: "ID" # 識別子列名
     ignore_items: ["reflection-length", "w3-reflection-length", "w4-reflection-length"] # 無視する列名
   # １回分のデータ（WS1）用
   ws1:
     ra_col: "assessment-result" # 総合評価列
-    ca_cols: ["item-1", "item-2", "item-3", "item-4", "item-5", "item-6", "item-7", "item-8", "item-9", "item-10", "item-11", "item-12", "item-13", "item-14", "item-15"] # 質問項目列
+    ca_cols: ["item-1", "item-2", "item-3", "item-4", "item-5", "item-6", "item-7", "item-8", "item-9", "item-10", "item-11", "item-12", "item-13", "item-14", "item-15"] # 回答列リスト
   # ２回分のデータ（WS2）用
   ws2:
     pra_col: "w3-assessment-result" # 過去の総合評価列
-    pca_cols: ["w3-1", "w3-2", "w3-3", "w3-4", "w3-5", "w3-6", "w3-7", "w3-8", "w3-9", "w3-10", "w3-11", "w3-12", "w3-13", "w3-14", "w3-15"] # 過去の回答列
     ra_col: "w4-assessment-result" # 今回の総合評価列
-    ca_cols: ["w4-1", "w4-2", "w4-3", "w4-4", "w4-5", "w4-6", "w4-7", "w4-8", "w4-9", "w4-10", "w4-11", "w4-12", "w4-13", "w4-14", "w4-15"] # 今回の回答列
-
-  
+    pca_cols: ["w3-1", "w3-2", "w3-3", "w3-4", "w3-5", "w3-6", "w3-7", "w3-8", "w3-9", "w3-10", "w3-11", "w3-12", "w3-13", "w3-14", "w3-15"] # 過去の回答列リスト
+    ca_cols: ["w4-1", "w4-2", "w4-3", "w4-4", "w4-5", "w4-6", "w4-7", "w4-8", "w4-9", "w4-10", "w4-11", "w4-12", "w4-13", "w4-14", "w4-15"] # 今回の回答列リスト
 
 # クロスバリデーション
 cv:
-  folds: 5 # 分割数
+  folds: 3 # 分割数
   stratified: true # 層化サンプリングの有無
   random_seed: 42 # 乱数シード
 
@@ -47,11 +49,12 @@ question_selection:
 # ログ設定
 logging:
   save_logs: true # ログを保存するかどうか
-  log_dir: "outputs/logs/logs_test" # ログ保存ディレクトリ
+  log_dir: "outputs/logs/ws1" # ログ保存ディレクトリ
   timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
 
 results:
   save_csv: true # 結果をCSVで保存するかどうか
   output_dir: "outputs/results_csv" # 結果出力ディレクトリ
   timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
-  filename_suffix: "test" # 結果ファイル名のサフィックス
+  filename_suffix: "sample2" # 結果ファイル名のサフィックス
+  save_fold_results: true # 各foldの結果も保存するかどうか

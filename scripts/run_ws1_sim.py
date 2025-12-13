@@ -1,57 +1,72 @@
 import os
 import pandas as pd
-import argparse
-from sklearn.model_selection import StratifiedKFold
-
+from sklearn.model_selection import KFold, StratifiedKFold
 from datetime import datetime
 
+from adaptive_self_assessment.config import load_config
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 
-def run_simulations(
-        model_name: str = "logistic_regression",
-        dir_ws1: str = None,
-        RC_THRESHOLD: float = 0.80,
-        RI_THRESHOLD: float = 0.70,
-        K: int = 5,
-        output_csv_path: str = None
-):
+def run_simulations()-> pd.DataFrame:
+
     """
     1回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
-    Parameters:
-    -----------
-        model_name: str
-            総合評価推定に使用するモデル
-        dir_ws1: str
-            WS1データのディレクトリパス
-        RC_THRESHOLD: float
-            補完の信頼度閾値
-        RI_THRESHOLD: float
-            総合評価の信頼度閾値
-        K: int
-            交差検証の分割数
-        output_csv_path: str
-            結果保存先パス
-    Returns:
-        results_ws1: pd.DataFrame
-            シミュレーション結果のデータフレーム
+    設定はconfig.yamlから読み込む
     """
 
-    # １回分の自己評価データでシミュレーション
-    print("=== WS1 Simulation Tests Started ===")
+    cfg = load_config()
 
-    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 設定の取得
 
-    # 全ての能力の結果格納用リスト
-    results_all_ws1 = []
+    # 実行モードの取得
+    mode = cfg.get("mode", "ws1")
+    if mode != "ws1":
+        print(f"[Warn] config mode is set to {mode}, expected 'ws1'.")
+    
+    model_cfg = cfg.get("model", {})
+    thresholds_cfg = cfg.get("thresholds", {})
+    data_cfg = cfg.get("data", {})
+    cv_cfg = cfg.get("cv", {})
+    logging_cfg = cfg.get("logging", {})
+    results_cfg = cfg.get("results", {})
 
-    # ディレクトリが指定されいない、存在しない場合は
+    common_data = data_cfg.get("common", {})
+    ws1_data = data_cfg.get("ws1", {})
+
+    model_name = model_cfg.get("type", "logistic_regression")
+    RC_THRESHOLD = thresholds_cfg.get("RC", 0.80)
+    RI_THRESHOLD = thresholds_cfg.get("RI", 0.70)
+
+    K = cv_cfg.get("folds", 5)
+    stratified = cv_cfg.get("stratified", True)
+    random_seed = cv_cfg.get("random_seed", 42)
+
+    dir_ws1 = ws1_data.get("input_dir", None)
     if dir_ws1 is None or not os.path.exists(dir_ws1):
         raise ValueError(f"Directory for WS1 data is not specified or does not exist: {dir_ws1}")
     
-    # ログ用ディレクトリの作成
-    log_dir = os.path.join("outputs", "logs", "ws1", run_id)
-    os.makedirs(log_dir, exist_ok=True)
-    print(f"Logs will be saved to: {log_dir}")
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    ## logging設定
+    save_logs = logging_cfg.get("save_logs", True)
+    base_log_dir = logging_cfg.get("log_dir", "outputs/logs")
+    timestamped_logs  = logging_cfg.get("timestamped", True)
+
+    if save_logs:
+        if timestamped_logs:
+            log_dir = os.path.join(base_log_dir, "ws1", run_id)
+        else:
+            log_dir = os.path.join(base_log_dir, "ws1")
+        os.makedirs(log_dir, exist_ok=True)
+        print(f"Logs will be saved to: {log_dir}")
+    else:
+        log_dir = None
+        print("Logging disabled by config.")
+
+    # １回分の自己評価データでシミュレーション
+    print("=== WS1 Simulation Tests Started ===")
+    print(f"Using model: {model_name}")
+    print(f"RC_THRESHOLD: {RC_THRESHOLD}, RI_THRESHOLD: {RI_THRESHOLD}, folds: {K}, stratified: {stratified}")
+    print(f"Input dir: {dir_ws1}")
 
     # 対象ファイル名をソートして取得
     filenames_ws1 = sorted([f for f in os.listdir(dir_ws1) if f.endswith(".csv")])
@@ -60,13 +75,23 @@ def run_simulations(
     rc_str = str(RC_THRESHOLD).replace(".", "p")
     ri_str = str(RI_THRESHOLD).replace(".", "p")
 
+    # 全ての能力の結果格納用リスト
+    results_all_ws1 = []
+
     # 各能力ごとにシミュレーションを実行
     for filename in filenames_ws1:
 
         # データの読み込み
         csv_path = os.path.join(dir_ws1, filename)
         df = pd.read_csv(csv_path)
-        skill_name = filename.split("_")[2].replace(".csv", "")  # ファイル名から能力名を抽出
+
+        # スキル名の取得
+        default_skill_name = (
+            filename.split("_")[2].replace(".csv", "")
+            if "_" in filename else filename.replace(".csv", "")
+        )
+        skill_name = common_data.get("skill-name", default_skill_name)
+
 
         print(f"==== WS1: {skill_name} ====")
         print(f"Using model: {model_name}")
