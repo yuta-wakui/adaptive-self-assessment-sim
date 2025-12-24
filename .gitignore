@@ -29,3 +29,7 @@ outputs/*
 
 # Preprocess codes:
 scripts/preprocess/
+
+# temp files
+temp.yaml
+temp2.yaml

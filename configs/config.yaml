@@ -1,7 +1,7 @@
 # Adaptive Self-Assessment Config File
 
 # 実行モード
-mode: "ws1" # ws1 = 1回分データ / ws2 = 2回分データ
+mode: "ws2" # ws1 = 1回分データ / ws2 = 2回分データ
 
 # モデル設定
 model:
@@ -14,17 +14,17 @@ model:
 
 # 信頼度閾値
 thresholds:
-  RC: 0.50 # 補完の信頼度閾値
+  RC: 0.80 # 補完の信頼度閾値
   RI: 0.70 # 総合評価推定の信頼度閾値
 
 # データ設定
 data:
   # 共通設定
   common: 
-    input_path: "data/adjusted/ws1_adjusted_240531/ws1_1_information_adjusted.csv" # 使用するデータのファイルパス（csv形式）
-    skill-name: "information" # 評価する能力名
+    input_path: "data/preprocessed/ws2_preprocessed_20250326_1300/ws2_1_information_1300_preprocessed.csv" # 使用するデータのファイルパス（csv形式）
+    skill_name: "information" # 評価する能力名
     id_col: "ID" # 識別子列名
-    ignore_items: ["reflection-length"] # 無視する列名
+    ignore_items: ["reflection-length", "w3-reflection-length", "w4-reflection-length"] # 無視する列名
   # １回分のデータ（WS1）用
   ws1:
     ra_col: "assessment-result" # 総合評価列
@@ -49,12 +49,12 @@ question_selection:
 # ログ設定
 logging:
   save_logs: true # ログを保存するかどうか
-  log_dir: "outputs/logs/ws1" # ログ保存ディレクトリ
+  log_dir: "outputs/logs/ws2" # ログ保存ディレクトリ
   timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
 
 results:
   save_csv: true # 結果をCSVで保存するかどうか
-  output_dir: "outputs/results_csv" # 結果出力ディレクトリ
+  output_dir: "outputs/results" # 結果出力ディレクトリ
   timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
   filename_suffix: "info" # 結果ファイル名のサフィックス
   save_fold_results: true # 各foldの結果も保存するかどうか

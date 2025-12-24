@@ -41,6 +41,8 @@ def test_run_ws1_simulation(ws1_path):
         "num_test",
         "accuracy_over_threshold",
         "accuracy_all",
+        "f1_macro_over_threshold",
+        "f1_macro_all",
         "coverage_over_threshold",
         "total_questions",
         "avg_answered_questions",
@@ -55,7 +57,7 @@ def test_run_ws1_simulation(ws1_path):
     print("WS1 simulation Results: ", sim_results)
 
 @pytest.mark.parametrize("ws2_path", [
-    "data/sample/ws2/ws2_data_sample.csv",
+    "data/sample/ws2/ws2_data_sample1.csv",
 ])
 def test_run_ws2_simulation(ws2_path):
     print("=== WS2 Simulation Test ===")

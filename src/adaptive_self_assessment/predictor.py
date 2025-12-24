@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Dict, Any
+import hashlib
+import json
+from typing import Hashable, List, Tuple, Dict, Any
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler

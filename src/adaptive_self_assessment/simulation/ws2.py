@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from sklearn.metrics import accuracy_score, f1_score
 
 from adaptive_self_assessment.config import load_config
 from adaptive_self_assessment.selector import select_question, set_selector_seed
@@ -41,7 +42,7 @@ def run_ws2_simulation(
     common_cfg = data_cfg.get("common", {})
     ws2_cfg = data_cfg.get("ws2", {})
 
-    skill_name: str = common_cfg.get("skill-name", "")
+    skill_name: str = common_cfg.get("skill_name", "")
     id_col: str = common_cfg.get("id_col", "ID")
 
     if not skill_name:
@@ -65,7 +66,8 @@ def run_ws2_simulation(
     # ログ設定
     logging_cfg = cfg.get("logging", {})
     save_logs: bool = bool(logging_cfg.get("save_logs", True))
-    log_dir: str = logging_cfg.get("log_dir", "outputs/logs/ws2")
+    base_log_dir: str = logging_cfg.get("log_dir", "outputs/logs")
+    log_dir = os.path.join(base_log_dir, "ws2")
     timestamped: bool = bool(logging_cfg.get("timestamped", True))
 
     # 訓練データに必要な列が存在するか確認
@@ -189,18 +191,27 @@ def run_ws2_simulation(
     # 結果集計
     logs_df = pd.DataFrame(logs) # 各ユーザーの結果をデータフレームに変換
 
-    accuracy_over_threshold = None # 閾値を超えた自動推定の精度
-    accuracy_all = None # 全体の自動推定の精度
-    coverage_over_threshold = None # 閾値を超えた自動推定の割合
+    # 指標計算
+    y_true = logs_df["actual_ra"]
+    y_pred = logs_df["predicted_ra"]
 
-    # 閾値を超えた自動推定の精度
+    accuracy_all = float(accuracy_score(y_true, y_pred) * 100)
+    f1_macro_all = float(f1_score(y_true, y_pred, average='macro') * 100)
+
+    # 閾値を超えた場合の指標
+    
     confident_df = logs_df[logs_df["is_confident"] == True]
     if not confident_df.empty:
-        accuracy_over_threshold = float(confident_df["correct"].mean() * 100)
-        coverage_over_threshold = len(confident_df) / len(logs_df) * 100
-    
-    # 自動推定の全体の精度
-    accuracy_all = float(logs_df["correct"].mean() * 100)
+        y_true_c = confident_df["actual_ra"].astype(int)
+        y_pred_c = confident_df["predicted_ra"].astype(int)
+
+        accuracy_over_threshold = float(accuracy_score(y_true_c, y_pred_c) * 100)
+        f1_macro_over_threshold = float(f1_score(y_true_c, y_pred_c, average="macro") * 100)
+        coverage_over_threshold = float(len(confident_df) / len(logs_df) * 100)
+    else:
+        accuracy_over_threshold = None
+        f1_macro_over_threshold = None
+        coverage_over_threshold = None
 
     # 平均回答数・平均補完数・削減率を計算
     avg_answered_questions = float(logs_df["num_answered_questions"].mean())
@@ -226,6 +237,8 @@ def run_ws2_simulation(
         "num_test": len(test_df),
         "accuracy_over_threshold": accuracy_over_threshold,
         "accuracy_all": accuracy_all,
+        "f1_macro_over_threshold": f1_macro_over_threshold,
+        "f1_macro_all": f1_macro_all,
         "coverage_over_threshold": coverage_over_threshold,
         "total_questions": total_questions,
         "avg_answered_questions": avg_answered_questions,

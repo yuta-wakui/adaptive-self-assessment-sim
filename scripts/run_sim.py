@@ -163,8 +163,10 @@ def run_simulations() -> pd.DataFrame:
         "avg_complemented_questions": _calc_mean(df_fold, "avg_complemented_questions"),
         "avg_reduction_rate": _calc_mean(df_fold, "reduction_rate"),
         "accuracy_over_threshold": _calc_mean(df_fold, "accuracy_over_threshold"),
+        "f1_macro_over_threshold": _calc_mean(df_fold, "f1_macro_over_threshold"),
         "coverage_over_threshold": _calc_mean(df_fold, "coverage_over_threshold"),
         "accuracy_all": _calc_mean(df_fold, "accuracy_all"),
+        "f1_macro_all": _calc_mean(df_fold, "f1_macro_all"),
         "avg_response_time": _calc_mean(df_fold, "avg_response_time"),
     }
 
