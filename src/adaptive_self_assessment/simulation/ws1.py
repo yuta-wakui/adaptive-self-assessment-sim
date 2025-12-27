@@ -12,7 +12,8 @@ from adaptive_self_assessment.predictor import predict_item_ws1, predict_overall
 
 def run_ws1_simulation(
         train_df: pd.DataFrame = None,
-        test_df: pd.DataFrame = None, 
+        test_df: pd.DataFrame = None,
+        cfg: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
     """
     1回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
@@ -22,15 +23,18 @@ def run_ws1_simulation(
             訓練用のデータ
         test_df: pd.DataFrame
             テスト用のデータ
+        cfg: Dict[str, Any]
+            設定辞書 
     Returns:
         results: Dict[str, any]
             シミュレーション結果
     """
+
     if train_df is None or test_df is None:
         raise ValueError("train_df and test_df must be provided.")
 
-    # configの読み込み
-    cfg = load_config()
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
 
     # 閾値
     thresholds_cfg = cfg.get("thresholds", {})
@@ -67,7 +71,6 @@ def run_ws1_simulation(
     base_log_dir: str = logging_cfg.get("log_dir", "outputs/logs")
     log_dir = os.path.join(base_log_dir, "ws1")
     timestamped: bool = bool(logging_cfg.get("timestamped", True))
-
 
     # 訓練データに必要な列が存在するか確認
     for col in ca_cols_ws1 + [ra_col]:
@@ -116,6 +119,7 @@ def run_ws1_simulation(
                 Ca=Ca,
                 C=C, 
                 df_train=train_df,
+                cfg=cfg,
                 random_state=42
             )
 
@@ -134,6 +138,7 @@ def run_ws1_simulation(
         Ra_pred, Ra_conf = predict_overall_ws1(
             Ca=Ca,
             df_train=train_df,
+            cfg=cfg,
             random_state=42
         )
 
@@ -193,7 +198,6 @@ def run_ws1_simulation(
     f1_macro_all = float(f1_score(y_true, y_pred, average='macro') * 100)
 
     # 閾値を超えた場合の指標
-    
     confident_df = logs_df[logs_df["is_confident"] == True]
     if not confident_df.empty:
         y_true_c = confident_df["actual_ra"].astype(int)

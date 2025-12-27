@@ -13,6 +13,7 @@ from adaptive_self_assessment.predictor import predict_item_ws2, predict_overall
 def run_ws2_simulation(
         train_df: pd.DataFrame = None,
         test_df: pd.DataFrame = None, 
+        cfg: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
     """
     2回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
@@ -22,15 +23,17 @@ def run_ws2_simulation(
             訓練用のデータ
         test_df: pd.DataFrame
             テスト用のデータ
+        cfg: Dict[str, Any]
+            設定辞書
     Returns:
         results: Dict[str, any]
             シミュレーション結果
     """
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
     if train_df is None or test_df is None:
         raise ValueError("train_df and test_df must be provided.")
-
-    # configの読み込み
-    cfg = load_config()
 
     # 閾値
     thresholds_cfg = cfg.get("thresholds", {})
@@ -121,6 +124,7 @@ def run_ws2_simulation(
                 Ca=Ca,
                 C=C,
                 df_train=train_df,
+                cfg=cfg,
                 random_state=42
             )
 
@@ -141,6 +145,7 @@ def run_ws2_simulation(
             Pca=Pca,
             Ca=Ca,
             df_train=train_df,
+            cfg=cfg,
             random_state=42
         )
 
@@ -199,7 +204,6 @@ def run_ws2_simulation(
     f1_macro_all = float(f1_score(y_true, y_pred, average='macro') * 100)
 
     # 閾値を超えた場合の指標
-    
     confident_df = logs_df[logs_df["is_confident"] == True]
     if not confident_df.empty:
         y_true_c = confident_df["actual_ra"].astype(int)

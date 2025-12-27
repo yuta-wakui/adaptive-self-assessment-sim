@@ -1,32 +1,18 @@
 import numpy as np
 import pandas as pd
-import hashlib
-import json
-from typing import Hashable, List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 
-from adaptive_self_assessment.config import load_config
-
-def _load_data_config() -> Dict[str, Any]:
-    """
-    設定ファイルからデータ関連の設定を読み込む内部関数
-    Returns:
-    -------
-        data_cfg: Dict[str, any]
-            データ関連の設定内容
-    """
-    cfg = load_config()
-    data_cfg = cfg.get("data", {})
-    return data_cfg
-
-def _load_model_config(kind: str) -> Tuple[str, Dict[str, Any]]:
+def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, Any]]:
     """
     設定ファイルからモデル設定を読み込む内部関数
     Parameters:
     ----------
+        cfg: Dict[str, Any]
+            設定辞書
         kind: str
             モデル種類（"item" or "overall"）
     Returns:
@@ -36,12 +22,11 @@ def _load_model_config(kind: str) -> Tuple[str, Dict[str, Any]]:
         params: Dict[str, Any]
             モデルのパラメータ設定
     """
-    cfg = load_config()
-    model_cfg = cfg.get("model", {})
-    
     if kind not in ["item", "overall"]:
         raise ValueError(f"Unsupported model kind: {kind}")
-    
+
+    model_cfg = cfg.get("model", {})
+
     sub_cfg = model_cfg.get(kind, {})
     model_type = sub_cfg.get("type", "logistic_regression")
     params = sub_cfg.get("params", {})
@@ -55,6 +40,8 @@ def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42
     ----------
         model_name: str
             モデルの種類（例："logistic_regression"）
+        params: Dict[str, Any]
+            モデルのパラメータ設定
         random_state: int
             乱数シード
     Returns:
@@ -84,6 +71,7 @@ def predict_item_ws1(
         Ca: Dict[str, int],
         C: List[str],
         df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
         random_state: int = 42
 ) -> Tuple[Dict[str, int], Dict[str, float]]:
     """
@@ -96,6 +84,8 @@ def predict_item_ws1(
             残りの質問項目
         df_train: pd.DataFrame 
             予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
         random_state: int
             乱数シード
     Returns:
@@ -108,8 +98,12 @@ def predict_item_ws1(
     preds: Dict[str, int] = {}
     confidences: Dict[str, float] = {}
 
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
     # configからモデル設定を取得
-    model_type, model_params = _load_model_config(kind="item")
+    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
 
     # Caにあるキーのうち、df_trainに存在する列のみを使用
     ca_cols_exist: List[str] = [c for c in Ca.keys() if c in df_train.columns]
@@ -124,8 +118,8 @@ def predict_item_ws1(
                 raise ValueError("No usable features or target column missing.")
             
             # 学習データの作成
-            X_train = df_train[x_cols]
-            y_train = df_train[item]
+            X_train = df_train[x_cols].copy()
+            y_train = df_train[item].copy()
 
             # モデルの定義
             model = _build_model(
@@ -165,6 +159,7 @@ def predict_item_ws2(
         Ca: Dict[str, int], 
         C: List[str], 
         df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
         random_state: int = 42
     ) -> Tuple[Dict[str, int], Dict[str, float]]:
     """
@@ -181,6 +176,8 @@ def predict_item_ws2(
             残りの質問項目
         df_train: pd.DataFrame 
             予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
         random_state: int
             乱数シード
     Returns:
@@ -194,8 +191,12 @@ def predict_item_ws2(
     preds: Dict[str, int] = {}
     confidences: Dict[str, float] = {}
 
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
     # 過去の総合評価と過去のチェック項目列名を取得
-    data_cfg = _load_data_config()
+    data_cfg = cfg.get("data", {})
     pra_col: str = data_cfg.get("ws2", {}).get("pra_col")
     pca_cols: List[str] = data_cfg.get("ws2", {}).get("pca_cols", [])
 
@@ -203,7 +204,7 @@ def predict_item_ws2(
         raise ValueError("pra_col and pca_cols must be specified in config for WS2.")
 
     # configからモデル設定を取得
-    model_type, model_params = _load_model_config(kind="item")
+    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
 
     # Caにあるキーのうち、df_trainに存在する列のみを使用
     ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
@@ -217,8 +218,8 @@ def predict_item_ws2(
                 raise ValueError("No usable features or target column missing.")
             
             # 学習データの作成
-            X_train = df_train[x_cols]
-            y_train = df_train[item]
+            X_train = df_train[x_cols].copy()
+            y_train = df_train[item].copy()
 
             # モデルの定義
             model = _build_model(
@@ -266,6 +267,7 @@ def predict_item_ws2(
 def predict_overall_ws1(
         Ca: Dict[str, int],
         df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
         random_state: int = 42
 ) -> Tuple[int, float]:
     """
@@ -276,6 +278,8 @@ def predict_overall_ws1(
             回答済みor補完済み項目
         df_train: pd.DataFrame 
             予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
         random_state: int
             乱数シード
     Returns:
@@ -285,8 +289,12 @@ def predict_overall_ws1(
         confidence: float
             予測の信頼度
     """
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
     # 列名の取得
-    data_cfg = _load_data_config()
+    data_cfg = cfg.get("data", {})
     ca_cols: List[str] = data_cfg.get("ws1", {}).get("ca_cols", [])
     ra_col: str = data_cfg.get("ws1", {}).get("ra_col")
 
@@ -298,11 +306,11 @@ def predict_overall_ws1(
         if c not in df_train.columns:
             raise ValueError("Required columns missing in training data.")
 
-    X_train = df_train[ca_cols]
-    y_train = df_train[ra_col]
+    X_train = df_train[ca_cols].copy()
+    y_train = df_train[ra_col].copy()
 
     # configからモデル設定を取得
-    model_type, model_params = _load_model_config(kind="overall")
+    model_type, model_params = _get_model_config(cfg=cfg, kind="overall")
 
     # モデルの定義
     model = _build_model(
@@ -337,6 +345,7 @@ def predict_overall_ws2(
         Pca: Dict[str, int],
         Ca: Dict[str, int],
         df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
         random_state: int = 42
 ) -> Tuple[int, float]:
     """
@@ -351,6 +360,8 @@ def predict_overall_ws2(
             回答済みor補完済み項目
         df_train: pd.DataFrame 
             予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
         random_state: int
             乱数シード
     Returns:
@@ -360,8 +371,12 @@ def predict_overall_ws2(
         confidence: float
             予測の信頼度
     """
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
     # 列名の取得
-    data_cfg = _load_data_config()
+    data_cfg = cfg.get("data", {})
     pra_col: str = data_cfg.get("ws2", {}).get("pra_col")
     pca_cols: List[str] = data_cfg.get("ws2", {}).get("pca_cols", [])
     ca_cols: List[str] = data_cfg.get("ws2", {}).get("ca_cols", [])
@@ -376,11 +391,11 @@ def predict_overall_ws2(
             raise ValueError("Required columns missing in training data.")
     
     X_cols = [pra_col] + pca_cols + ca_cols
-    X_train = df_train[X_cols]
-    y_train = df_train[ra_col]
+    X_train = df_train[X_cols].copy()
+    y_train = df_train[ra_col].copy()
 
     # configからモデル設定を取得
-    model_type, model_params = _load_model_config(kind="overall")
+    model_type, model_params = _get_model_config(cfg=cfg, kind="overall")
 
     # モデルの定義
     model = _build_model(

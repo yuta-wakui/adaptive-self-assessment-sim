@@ -30,6 +30,8 @@ outputs/*
 # Preprocess codes:
 scripts/preprocess/
 
+# Reports:
+reports
+
 # temp files
-temp.yaml
-temp2.yaml
+temp_yaml

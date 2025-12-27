@@ -1,13 +1,37 @@
 import os
+import pandas as pd
+import argparse
+import yaml
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
-import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from adaptive_self_assessment.config import load_config
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser()
+    p.add_argument("--config", type=str, required=True, help="Path to the config file")
+    return p.parse_args()
+
+def load_config(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
+    """
+    YAML形式の設定ファイルを読み込む関数
+    
+    Parameters:
+    ----------
+    config_path: str
+        設定ファイルのパス（デフォルト； "configs/config.yaml"）
+    
+    Returns:
+    -------
+    cfg: Dict[str, Any] 
+        読み込んだ設定内容を辞書形式で返す
+    """
+    with open(config_path, 'r', encoding='utf-8') as f:
+        cfg = yaml.safe_load(f)
+    return cfg
 
 def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
     """
@@ -30,20 +54,24 @@ def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
         return None
     return float(s.mean())
 
-def run_simulations() -> pd.DataFrame:
+def run_simulations(config_path: str) -> pd.DataFrame:
     """
     1回分（WS1）または2回分（WS2）の自己評価データで適応型自己評価のシミュレーションを交差検証で実行する関数
     設定はconfig.yamlから読み込む
+    Parameters:
+    -----------
+        config_path: str
+            設定ファイルのパス
     Returns:
     -------
         results_df: pd.DataFrame
             シミュレーション結果のデータフレーム
     """
     # config設定の読み込み
-    cfg = load_config()
+    cfg = load_config(config_path)
 
     # 実行モード（WS1/WS2)
-    mode: str = cfg.get("mode", "ws1")
+    mode: str = cfg.get("mode", {}).lower()
     if mode not in ("ws1", "ws2"):
         raise ValueError(f"Unsupported mode: {mode} (expected 'ws1' or 'ws2')")
 
@@ -68,7 +96,7 @@ def run_simulations() -> pd.DataFrame:
     if not input_path or not os.path.exists(input_path):
         raise ValueError(f"Input path does not exist: {input_path}")
 
-    skill_name = common_cfg.get("skill-name", "unknown_skill")
+    skill_name = common_cfg.get("skill_name", "unknown_skill")
     ignore_items: List[str] = common_cfg.get("ignore_items", [])
 
     # ラベル列名
@@ -91,7 +119,7 @@ def run_simulations() -> pd.DataFrame:
     # 結果保存設定
     results_cfg = cfg.get("results", {})
     save_csv: bool = bool(results_cfg.get("save_csv", True))
-    output_dir: str = results_cfg.get("output_dir", "outputs/results_csv")
+    output_dir: str = results_cfg.get("output_dir", "outputs/results")
     out_timestamped: bool = bool(results_cfg.get("timestamped", True))
     filename_suffix: str = str(results_cfg.get("filename_suffix", "")).strip()
     save_fold_results: bool = bool(results_cfg.get("save_fold_results", False))
@@ -134,9 +162,9 @@ def run_simulations() -> pd.DataFrame:
         test_df = df.iloc[test_idx].copy()
 
         if mode == "ws1":
-            sim = run_ws1_simulation(train_df=train_df, test_df=test_df)
+            sim = run_ws1_simulation(train_df=train_df, test_df=test_df, cfg=cfg)
         else:
-            sim = run_ws2_simulation(train_df=train_df, test_df=test_df)
+            sim = run_ws2_simulation(train_df=train_df, test_df=test_df, cfg=cfg)
 
         # fold番号など補助情報だけ付与
         sim = dict(sim)
@@ -144,7 +172,7 @@ def run_simulations() -> pd.DataFrame:
         sim["mode"] = mode
         sim["csv_path"] = input_path
         fold_results.append(sim)
-
+ 
     df_fold = pd.DataFrame(fold_results)
 
     if save_fold_results:
@@ -201,4 +229,5 @@ def run_simulations() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    run_simulations()
+    args = parse_args()
+    run_simulations(config_path=args.config)
