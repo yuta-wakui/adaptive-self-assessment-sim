@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sklearn.metrics import accuracy_score, f1_score
 
-from adaptive_self_assessment.config import load_config
 from adaptive_self_assessment.selector import select_question, set_selector_seed
 from adaptive_self_assessment.predictor import predict_item_ws1, predict_overall_ws1
 

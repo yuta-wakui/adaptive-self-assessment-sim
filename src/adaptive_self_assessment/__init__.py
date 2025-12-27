@@ -4,7 +4,7 @@ adaptive_self_assessment
 Machine learning-driven adaptive self-assessment library
 """
 
-from .config import load_config
+from .random import make_selector_seed
 from .selector import set_selector_seed, select_question
 from .predictor import (
     predict_item_ws1,
@@ -16,7 +16,7 @@ from .simulation.ws1 import run_ws1_simulation
 from .simulation.ws2 import run_ws2_simulation
 
 __all__ = [
-    "load_config",
+    "make_selector_seed",
     "set_selector_seed",
     "select_question",
     "predict_item_ws1",
