@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import os
 import time
@@ -6,6 +5,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sklearn.metrics import accuracy_score, f1_score
 
+from adaptive_self_assessment.random import make_selector_seed
 from adaptive_self_assessment.selector import select_question, set_selector_seed
 from adaptive_self_assessment.predictor import predict_item_ws2, predict_overall_ws2
 
@@ -13,6 +13,7 @@ def run_ws2_simulation(
         train_df: pd.DataFrame = None,
         test_df: pd.DataFrame = None, 
         cfg: Dict[str, Any] = None,
+        fold: int = 0
     ) -> Dict[str, Any]:
     """
     2回分の自己評価データで適応型自己評価のシミュレーションを実行する関数
@@ -24,9 +25,13 @@ def run_ws2_simulation(
             テスト用のデータ
         cfg: Dict[str, Any]
             設定辞書
+        fold: int
+            交差検証のfold番号
     Returns:
         results: Dict[str, any]
             シミュレーション結果
+        logs_df: pd.DataFrame
+                各ユーザーの詳細なログデータ
     """
     if cfg is None:
         raise ValueError("cfg must be provided.")
@@ -65,13 +70,6 @@ def run_ws2_simulation(
     model_cfg = cfg.get("model", {})
     overall_model_type: str = model_cfg.get("overall", {}).get("type", "logistic_regression")
 
-    # ログ設定
-    logging_cfg = cfg.get("logging", {})
-    save_logs: bool = bool(logging_cfg.get("save_logs", True))
-    base_log_dir: str = logging_cfg.get("log_dir", "outputs/logs")
-    log_dir = os.path.join(base_log_dir, "ws2")
-    timestamped: bool = bool(logging_cfg.get("timestamped", True))
-
     # 訓練データに必要な列が存在するか確認
     for col in pca_cols + ca_cols_ws2 + [pra_col, ra_col]:
         if col not in train_df.columns:
@@ -98,8 +96,10 @@ def run_ws2_simulation(
         complemented_items: List[tuple] = [] # 補完された項目
         correct_complement_items: List[str] = [] # 正解した補完項目
 
-        # 質問セレクタのシード設定（ユーザーごとに変える）
-        set_selector_seed(np.random.randint(0, 10000))
+        # 質問セレクタのシード設定
+        cv_seed = int(cfg.get("cv", {}).get("random_seed", 42))
+        seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)
+        set_selector_seed(seed)
 
         # 処理開始時間
         start_time = time.time()   
@@ -189,6 +189,9 @@ def run_ws2_simulation(
             "RI_THRESHOLD": RI_THRESHOLD,
             "num_train": len(train_df),
             "model_type": overall_model_type,
+            "user_seed": seed,
+            "cv_seed": cv_seed,
+            "fold": fold,
         }
         logs.append(user_log)
     
@@ -222,6 +225,14 @@ def run_ws2_simulation(
     total_questions = len(ca_cols_ws2)
     reduction_rate = float((1.0 - avg_answered_questions / total_questions) * 100.0)
 
+    # 平均補完正解率を計算
+    valid_comp_df = logs_df[logs_df["num_complemented_questions"] > 0]
+
+    if not valid_comp_df.empty:
+        avg_complement_accuracy = float(valid_comp_df["complement_accuracy"].mean() * 100)
+    else:
+        avg_complement_accuracy = None
+
     # レスポンス時間の統計量
     if logs_df["response_time"].empty:
         avg_rt = max_rt = min_rt = None
@@ -246,23 +257,11 @@ def run_ws2_simulation(
         "total_questions": total_questions,
         "avg_answered_questions": avg_answered_questions,
         "avg_complemented_questions": avg_complemented_questions,
+        "avg_complement_accuracy": avg_complement_accuracy,
         "reduction_rate": reduction_rate,
         "avg_response_time": avg_rt,
         "max_response_time": max_rt,
         "min_response_time": min_rt,
     }
-
-    # ログを保存
-    if save_logs and log_dir:
-        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_dir = os.path.join(log_dir, run_id) if timestamped else log_dir
-        os.makedirs(out_dir, exist_ok=True)
-
-        rc_str = str(RC_THRESHOLD).replace(".", "p")
-        ri_str = str(RI_THRESHOLD).replace(".", "p")
-        log_filename = f"ws2_{skill_name}_rc{rc_str}_ri{ri_str}_logs.csv"
-        logs_path = os.path.join(out_dir, log_filename)
-
-        logs_df.to_csv(logs_path, index=False)
     
-    return sim_results
+    return sim_results, logs_df

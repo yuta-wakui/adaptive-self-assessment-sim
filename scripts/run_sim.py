@@ -71,7 +71,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     cfg = load_config(config_path)
 
     # 実行モード（WS1/WS2)
-    mode: str = cfg.get("mode", {}).lower()
+    mode: str = str(cfg.get("mode", "ws1")).lower()
     if mode not in ("ws1", "ws2"):
         raise ValueError(f"Unsupported mode: {mode} (expected 'ws1' or 'ws2')")
 
@@ -117,15 +117,22 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     )
 
     # 結果保存設定
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # シミュレーション結果保存設定
     results_cfg = cfg.get("results", {})
     save_csv: bool = bool(results_cfg.get("save_csv", True))
     output_dir: str = results_cfg.get("output_dir", "outputs/results")
     out_timestamped: bool = bool(results_cfg.get("timestamped", True))
     filename_suffix: str = str(results_cfg.get("filename_suffix", "")).strip()
     save_fold_results: bool = bool(results_cfg.get("save_fold_results", False))
-
-    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     suffix = f"_{filename_suffix}" if filename_suffix else ""
+
+    # 実行ログの保存設定
+    logging_cfg = cfg.get("logging", {})
+    save_logs = bool(logging_cfg.get("save_logs", True))
+    base_log_dir = logging_cfg.get("log_dir", "outputs/logs")
+    timestamped = bool(logging_cfg.get("timestamped", True))
 
     print(f"=== {mode.upper()} Simulation Started ===")
     print(f"input: {input_path}")
@@ -154,6 +161,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
 
     fold_results: List[Dict[str, Any]] = []
     all_fold_results: List[Dict[str, Any]] = []
+    all_logs: List[pd.DataFrame] = []
 
     # 交差検証でシミュレーションを実行
     for fold, (train_idx, test_idx) in enumerate(splitter.split(df, y), start=1):
@@ -162,17 +170,18 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         test_df = df.iloc[test_idx].copy()
 
         if mode == "ws1":
-            sim = run_ws1_simulation(train_df=train_df, test_df=test_df, cfg=cfg)
+            sim_result, logs_df = run_ws1_simulation(train_df=train_df, test_df=test_df, cfg=cfg, fold=fold)
         else:
-            sim = run_ws2_simulation(train_df=train_df, test_df=test_df, cfg=cfg)
+            sim_result, logs_df = run_ws2_simulation(train_df=train_df, test_df=test_df, cfg=cfg, fold=fold)
 
         # fold番号など補助情報だけ付与
-        sim = dict(sim)
-        sim["fold"] = fold
-        sim["mode"] = mode
-        sim["csv_path"] = input_path
-        fold_results.append(sim)
- 
+        sim_result = dict(sim_result)
+        sim_result["fold"] = fold
+        sim_result["mode"] = mode
+        sim_result["csv_path"] = input_path
+        fold_results.append(sim_result)
+        all_logs.append(logs_df)
+
     df_fold = pd.DataFrame(fold_results)
 
     if save_fold_results:
@@ -189,6 +198,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         "total_questions": _calc_mean(df_fold, "total_questions"),
         "avg_answered_questions": _calc_mean(df_fold, "avg_answered_questions"),
         "avg_complemented_questions": _calc_mean(df_fold, "avg_complemented_questions"),
+        "avg_complement_accuracy": _calc_mean(df_fold, "avg_complement_accuracy"),
         "avg_reduction_rate": _calc_mean(df_fold, "reduction_rate"),
         "accuracy_over_threshold": _calc_mean(df_fold, "accuracy_over_threshold"),
         "f1_macro_over_threshold": _calc_mean(df_fold, "f1_macro_over_threshold"),
@@ -215,6 +225,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         results_df.to_csv(out_path, index=False)
         print(f"\nSaved results to: {out_path}")
     
+    # foldごとのシミュレーション結果の保存
     if save_fold_results and all_fold_results:
         os.makedirs(subdir, exist_ok=True)
         
@@ -223,9 +234,24 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         fold_out_path = os.path.join(subdir, fold_out_name)
         fold_df.to_csv(fold_out_path, index=False)
         print(f"Saved fold results to: {fold_out_path}")
+    
+    # 全ユーザーのログデータを保存
+    if save_logs and all_logs:
+        logs_all_df = pd.concat(all_logs, ignore_index=True)
+
+        log_subdir = os.path.join(base_log_dir, mode)
+        if timestamped:
+            log_subdir = os.path.join(log_subdir, run_id)
+
+        os.makedirs(log_subdir, exist_ok=True)
+
+        log_out_name = f"{mode}_user_logs_rc{rc_str}_ri{ri_str}{suffix}.csv"
+        log_out_path = os.path.join(log_subdir, log_out_name)
+        logs_all_df.to_csv(log_out_path, index=False)
+        print(f"Saved user logs to: {log_out_path}")
 
     print(f"=== {mode.upper()} Simulation Completed ===")
-    return results_df
+    return results_df, logs_all_df
 
 
 if __name__ == "__main__":
