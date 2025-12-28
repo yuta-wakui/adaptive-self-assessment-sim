@@ -435,3 +435,31 @@ def predict_overall_ws2(
     confidence = float(proba[pred_idx])
     
     return pred, confidence
+
+def predict_overall_ws1_with_model(
+        model,
+        Ca: Dict[str, int],
+        ca_cols: List[str]
+) -> Tuple[int, float]:
+    """
+    1回分の学習者データを使って、総合評価を選択されたモデルで推定
+    Parameters:
+    ----------
+        model: Pipeline
+            予測に使うモデル
+        Ca: Dict[str, int]
+            回答済みor補完済み項目
+        ca_cols: List[str]
+            使用するチェック項目列名
+    Returns:
+    -------
+        pred: int
+            予測された総合評価結果
+        confidence: float
+            予測の信頼度
+    """
+    x_pred = pd.DataFrame([[Ca[c] for c in ca_cols]], columns=ca_cols)
+    proba = model.predict_proba(x_pred)[0]
+    classes = model.named_steps["clf"].classes_
+    pred_idx = int(np.argmax(proba))
+    return int(classes[pred_idx]), float(proba[pred_idx])
