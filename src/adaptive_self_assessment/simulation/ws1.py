@@ -1,12 +1,12 @@
 import pandas as pd
 import os
 import time
-from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sklearn.metrics import accuracy_score, f1_score
 
 from adaptive_self_assessment.random import make_selector_seed
 from adaptive_self_assessment.selector import select_question, set_selector_seed
+from adaptive_self_assessment.model_store import ModelStore
 from adaptive_self_assessment.predictor import predict_item_ws1, predict_overall_ws1
 
 def run_ws1_simulation(
@@ -82,9 +82,12 @@ def run_ws1_simulation(
     # 各ユーザーの結果格納用リスト
     logs: List[Dict[str, Any]] = []
 
+    # predictorのモデルキャッシュ（fold内で使いまわし）
+    store = ModelStore()
+
     # 各ユーザーに対してシミュレーションを実行
     for _, user in test_df.iterrows():
-        user_id = user[id_col] # ユーザーIDを取得
+        user_id = int(user[id_col]) # ユーザーIDを取得
 
         C = ca_cols_ws1.copy() # 未回答項目リスト
         Ca = {} # 回答or補完済み項目
@@ -119,6 +122,8 @@ def run_ws1_simulation(
                 C=C, 
                 df_train=train_df,
                 cfg=cfg,
+                store=store,
+                fold=fold,
                 random_state=42
             )
 
@@ -138,6 +143,8 @@ def run_ws1_simulation(
             Ca=Ca,
             df_train=train_df,
             cfg=cfg,
+            store=store,
+            fold=fold,
             random_state=42
         )
 
@@ -258,4 +265,5 @@ def run_ws1_simulation(
         "min_response_time": min_rt,
     }
     
+    print(f"[DEBUG][WS1][fold={fold}] model cache size = {len(store.models)}")
     return sim_results, logs_df

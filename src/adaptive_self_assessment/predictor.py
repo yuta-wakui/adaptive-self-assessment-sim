@@ -1,10 +1,28 @@
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional, Hashable
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+
+from adaptive_self_assessment.model_store import ModelStore
+
+FrozenParams = Tuple[Tuple[str, Hashable], ...]
+
+def _freeze_params(params: Dict[str, Any]) -> FrozenParams:
+    """
+    パラメータ辞書をハッシュ可能な形式に変換する内部関数
+    Parameters:
+    ----------
+        params: Dict[str, Any]
+            パラメータ辞書
+    Returns:
+    -------
+        frozen_params: Tuple[Tuple[str, Hashable], ...]
+            ハッシュ可能なパラメータのタプル
+    """
+    return tuple(sorted((str(k), params[k]) for k in params.keys()))
 
 def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, Any]]:
     """
@@ -67,208 +85,41 @@ def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42
     
     return model
 
-def predict_item_ws1(
-        Ca: Dict[str, int],
-        C: List[str],
-        df_train: pd.DataFrame,
-        cfg: Dict[str, Any],
-        random_state: int = 42
-) -> Tuple[Dict[str, int], Dict[str, float]]:
+def _predict_with_model(
+        model: Pipeline,
+        x_cols: List[str],
+        x_values: List[Any]
+) -> Tuple[int, float]:
     """
-    1回分の学習者データを使って、未回答項目Cを項目ごとにロジスティック回帰で推定
+    与えられたモデルで予測を行う内部関数
     Parameters:
     ----------
-        Ca: Dict[str, int]
-            回答済みor補完済み項目
-        C: List[str]
-            残りの質問項目
-        df_train: pd.DataFrame 
-            予測に使う訓練データ
-        cfg: Dict[str, Any]
-            設定辞書
-        random_state: int
-            乱数シード
+        model: Pipeline
+            予測に使うモデル
+        x_cols: List[str]
+            使用する特徴量列名
+        x_values: List[Any]
+            予測用の特徴量データ
     Returns:
     -------
-        preds: Dict[str, int]
-            予測された質問回答結果
-        confidences: Dict[str, float]
-            各予測の信頼度
+        pred: int
+            予測されたクラスラベル
+        confidence: float
+            予測の信頼度
     """
-    preds: Dict[str, int] = {}
-    confidences: Dict[str, float] = {}
-
-    # configがNoneの場合
-    if cfg is None:
-        raise ValueError("cfg must be provided.")
-
-    # configからモデル設定を取得
-    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
-
-    # Caにあるキーのうち、df_trainに存在する列のみを使用
-    ca_cols_exist: List[str] = [c for c in Ca.keys() if c in df_train.columns]
-
-    # 各項目の予測
-    for item in C:
-        try:
-            # 学習に使う特徴量の列
-            x_cols: List[str] = [c for c in ca_cols_exist if c != item]
-            # 使える特徴量がない or 訓練データに対象項目が存在しない場合はエラー
-            if len(x_cols) == 0 or item not in df_train.columns:
-                raise ValueError("No usable features or target column missing.")
-            
-            # 学習データの作成
-            X_train = df_train[x_cols].copy()
-            y_train = df_train[item].copy()
-
-            # モデルの定義
-            model = _build_model(
-                model_name=model_type,
-                params=model_params,
-                random_state=random_state
-            )
-
-            # モデルの学習
-            model.fit(X_train, y_train)
-
-            # 特徴量のうちCaにないものを確認
-            missing_features = [c for c in x_cols if c not in Ca]
-            if missing_features:
-                raise ValueError(f"Missing features in Ca: {missing_features}")
-
-            # チェック項目を推定
-            # 予測用データの作成
-            x_pred = pd.DataFrame([[Ca[c] for c in x_cols]], columns=x_cols)
-
-            # 項目の予測
-            proba = model.predict_proba(x_pred)[0]
-            classes = model.named_steps["clf"].classes_
-            pred_idx = int(np.argmax(proba))
-            preds[item] = int(classes[pred_idx])
-            confidences[item] = float(proba[pred_idx])
-        except Exception as e:
-            print(f"[predict_item_ws1 error] target={item}: {e}")
-            preds[item] = 1
-            confidences[item] = 0.5
-
-    return preds, confidences
-
-def predict_item_ws2(
-        Pra: int, 
-        Pca: Dict[str, int], 
-        Ca: Dict[str, int], 
-        C: List[str], 
-        df_train: pd.DataFrame,
-        cfg: Dict[str, Any],
-        random_state: int = 42
-    ) -> Tuple[Dict[str, int], Dict[str, float]]:
-    """
-    2回分の学習者データを使って、未回答項目Cを項目ごとにロジスティック回帰で推定
-    Parameters:
-    ----------
-        Pra: int
-            過去の総合評価の値
-        Pca: Dict[str, int]
-            過去のチェックリスト結果
-        Ca: Dict[str, int]
-            回答済みor補完済み項目
-        C: List
-            残りの質問項目
-        df_train: pd.DataFrame 
-            予測に使う訓練データ
-        cfg: Dict[str, Any]
-            設定辞書
-        random_state: int
-            乱数シード
-    Returns:
-    -------
-        preds: Dict[str, int]
-            予測された質問回答結果
-        confidences: Dict[str, float]
-            各予測の信頼度
-    """
-
-    preds: Dict[str, int] = {}
-    confidences: Dict[str, float] = {}
-
-    # configがNoneの場合
-    if cfg is None:
-        raise ValueError("cfg must be provided.")
-
-    # 過去の総合評価と過去のチェック項目列名を取得
-    data_cfg = cfg.get("data", {})
-    pra_col: str = data_cfg.get("ws2", {}).get("pra_col")
-    pca_cols: List[str] = data_cfg.get("ws2", {}).get("pca_cols", [])
-
-    if pra_col is None or not pca_cols:
-        raise ValueError("pra_col and pca_cols must be specified in config for WS2.")
-
-    # configからモデル設定を取得
-    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
-
-    # Caにあるキーのうち、df_trainに存在する列のみを使用
-    ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
-
-    # 各項目の予測
-    for item in C:
-        try:
-            # 学習に使う特徴量の列
-            x_cols: List[str] = [pra_col] + pca_cols + [c for c in ca_cols_exist if c != item]
-            if len(x_cols) == 0 or item not in df_train.columns:
-                raise ValueError("No usable features or target column missing.")
-            
-            # 学習データの作成
-            X_train = df_train[x_cols].copy()
-            y_train = df_train[item].copy()
-
-            # モデルの定義
-            model = _build_model(
-                model_name=model_type,
-                params=model_params,
-                random_state=random_state
-            )
-
-            # モデルの学習
-            model.fit(X_train, y_train)
-
-            # 特徴量のうちPra, Pca, Caにないものを確認
-            missing_features = []
-            missing_features += [c for c in pca_cols if c not in Pca]
-            missing_features += [c for c in x_cols if c not in Ca and c not in pca_cols and c != pra_col]
-            missing_features += [c for c in x_cols if c == pra_col and Pra is None]
-            if Pra is None or missing_features:
-                raise ValueError(f"Missing features in Pra, Pca, Ca: {missing_features}")
-            
-            # チェック項目を推定
-            # 予測用データの作成
-            row_vals = []
-            for c in x_cols:
-                if c == pra_col:
-                    row_vals.append(Pra)
-                elif c in pca_cols:
-                    row_vals.append(Pca[c])
-                else:
-                    row_vals.append(Ca[c])
-            x_pred = pd.DataFrame([row_vals], columns=x_cols)
-
-            # 項目の予測
-            proba = model.predict_proba(x_pred)[0]
-            classes = model.named_steps["clf"].classes_
-            pred_idx = int(np.argmax(proba))
-            preds[item] = int(classes[pred_idx])
-            confidences[item] = float(proba[pred_idx])
-        except Exception as e:
-            print(f"[predict_item_ws2 error] target={item}: {e}")
-            preds[item] = 1
-            confidences[item] = 0.5
-
-    return preds, confidences
+    x_pred = pd.DataFrame([x_values], columns=x_cols)
+    proba = model.predict_proba(x_pred)[0]
+    classes = model.named_steps["clf"].classes_
+    pred_idx = int(np.argmax(proba))
+    return int(classes[pred_idx]), float(proba[pred_idx])
 
 def predict_overall_ws1(
         Ca: Dict[str, int],
         df_train: pd.DataFrame,
         cfg: Dict[str, Any],
-        random_state: int = 42
+        fold: int,
+        store: Optional[ModelStore] = None,
+        random_state: int = 42,
 ) -> Tuple[int, float]:
     """
     1回分の学習者データを使って、総合評価を選択されたモデルで推定
@@ -280,12 +131,16 @@ def predict_overall_ws1(
             予測に使う訓練データ
         cfg: Dict[str, Any]
             設定辞書
+        fold: int
+            交差検証のfold番号
+        store: Optional[ModelStore]
+            モデルストア（キャッシュ用）
         random_state: int
             乱数シード
     Returns:
     -------
         pred: int
-            予測された総合評価結果
+            予測された総合評価結果  
         confidence: float
             予測の信頼度
     """
@@ -300,45 +155,42 @@ def predict_overall_ws1(
 
     if ra_col is None or not ca_cols:
         raise ValueError("ra_col and ca_cols must be specified in config for WS1.")
-
-    # 学習データの作成
+    
     for c in ca_cols + [ra_col]:
         if c not in df_train.columns:
             raise ValueError("Required columns missing in training data.")
 
-    X_train = df_train[ca_cols].copy()
-    y_train = df_train[ra_col].copy()
+    missing_ca = [c for c in ca_cols if c not in Ca]
+    if missing_ca:
+        raise ValueError(f"Missing features in Ca: {missing_ca}")
 
     # configからモデル設定を取得
     model_type, model_params = _get_model_config(cfg=cfg, kind="overall")
 
-    # モデルの定義
-    model = _build_model(
-        model_name=model_type,
-        params=model_params,
-        random_state=random_state
+    # モデルストアからモデルを取得
+    key = (
+        "ws1",
+        "overall",
+        int(fold),
+        tuple(ca_cols),
+        str(model_type),
+        _freeze_params(model_params)
     )
+    model = store.get(key) if store is not None else None
 
-    # モデルの学習
-    model.fit(X_train, y_train)
+    # モデルがキャッシュにない場合は新規作成・学習
+    if model is None:
+        # 学習データの作成
+        X_train = df_train[ca_cols]
+        y_train = df_train[ra_col]
+        model = _build_model(model_name=model_type, params=model_params, random_state=random_state)
+        model.fit(X_train, y_train)
+        if store is not None:
+            store.set(key, model)
 
-    # 特徴量のうちCaにないものを確認
-    missing_features = [c for c in ca_cols if c not in Ca]
-    if missing_features:
-        raise ValueError(f"Missing features in Ca: {missing_features}")
-    
     # 総合評価を推定
-    # 予測用データの作成
-    x_pred = pd.DataFrame([[Ca[c] for c in ca_cols]], columns=ca_cols)
-
-    # 総合評価の予測
-    proba = model.predict_proba(x_pred)[0]
-    classes = model.named_steps["clf"].classes_
-    pred_idx = int(np.argmax(proba))
-    pred = int(classes[pred_idx])
-    confidence = float(proba[pred_idx])
-
-    return pred, confidence
+    x_values = [Ca[c] for c in ca_cols]
+    return _predict_with_model(model, ca_cols, x_values)
 
 def predict_overall_ws2(
         Pra: int,
@@ -346,7 +198,9 @@ def predict_overall_ws2(
         Ca: Dict[str, int],
         df_train: pd.DataFrame,
         cfg: Dict[str, Any],
-        random_state: int = 42
+        fold: int,
+        store: Optional[ModelStore] = None,
+        random_state: int = 42,
 ) -> Tuple[int, float]:
     """
     2回分の学習者データを使って、総合評価を選択されたモデルで推定
@@ -362,12 +216,16 @@ def predict_overall_ws2(
             予測に使う訓練データ
         cfg: Dict[str, Any]
             設定辞書
+        fold: int
+            交差検証のfold番号
+        store: Optional[ModelStore]
+            モデルストア（キャッシュ用）
         random_state: int
             乱数シード
     Returns:
     -------
         pred: int
-            予測された総合評価結果
+            予測された総合評価結果  
         confidence: float
             予測の信頼度
     """
@@ -377,89 +235,286 @@ def predict_overall_ws2(
 
     # 列名の取得
     data_cfg = cfg.get("data", {})
-    pra_col: str = data_cfg.get("ws2", {}).get("pra_col")
-    pca_cols: List[str] = data_cfg.get("ws2", {}).get("pca_cols", [])
-    ca_cols: List[str] = data_cfg.get("ws2", {}).get("ca_cols", [])
-    ra_col: str = data_cfg.get("ws2", {}).get("ra_col")
+    ws2_cfg = data_cfg.get("ws2", {})
+    pra_col: str = ws2_cfg.get("pra_col")
+    pca_cols: List[str] = ws2_cfg.get("pca_cols", [])
+    ca_cols: List[str] = ws2_cfg.get("ca_cols", [])
+    ra_col: str = ws2_cfg.get("ra_col")
 
     if pra_col is None or not pca_cols or not ca_cols or ra_col is None:
         raise ValueError("pra_col, pca_cols, ca_cols and ra_col must be specified in config for WS2.")
-
-    # 学習データの作成
-    for c in [pra_col] + pca_cols + ca_cols + [ra_col]:
-        if c not in df_train.columns:
-            raise ValueError("Required columns missing in training data.")
     
-    X_cols = [pra_col] + pca_cols + ca_cols
-    X_train = df_train[X_cols].copy()
-    y_train = df_train[ra_col].copy()
+    required = [pra_col] + pca_cols + ca_cols + [ra_col]
+    for c in required:
+        if c not in df_train.columns:
+            raise ValueError(f"Required columns missing in training data: {c}")
+    
+    if Pra is None:
+        raise ValueError("Pra must be provided.")
+    missing_pca = [c for c in pca_cols if c not in Pca]
+    missing_ca = [c for c in ca_cols if c not in Ca]
+    if missing_pca or missing_ca:
+        raise ValueError(f"Missing features in Pca/Ca: {missing_pca + missing_ca}")
 
     # configからモデル設定を取得
+    X_cols = [pra_col] + pca_cols + ca_cols
     model_type, model_params = _get_model_config(cfg=cfg, kind="overall")
+    key  = (
+        "ws2",
+        "overall",
+        int(fold),
+        tuple(X_cols),
+        str(model_type),
+        _freeze_params(model_params)
+    )            
 
-    # モデルの定義
-    model = _build_model(
-        model_name=model_type,
-        params=model_params,
-        random_state=random_state
-    )
+    model = store.get(key) if store is not None else None
 
-    # モデルの学習
-    model.fit(X_train, y_train)
-
-    # 特徴量のうちPra, Pca, Caにないものを確認
-    missing_features = []
-    missing_features += [c for c in pca_cols if c not in Pca]
-    missing_features += [c for c in ca_cols if c not in Ca]
-    missing_features += [c for c in X_cols if c == pra_col and Pra is None]
-    if Pra is None or missing_features:
-        raise ValueError(f"Missing features in Pra, Pca, Ca: {missing_features}")
-
+    # モデルがキャッシュにない場合は新規作成・学習
+    if model is None:
+        # 学習データの作成
+        X_train = df_train[X_cols]
+        y_train = df_train[ra_col]
+        model = _build_model(model_name=model_type, params=model_params, random_state=random_state)
+        model.fit(X_train, y_train)
+        if store is not None:
+            store.set(key, model)
+    
     # 総合評価を推定
-    # 予測用データの作成
-    row_vals = []
+    x_values: List[int] = []
     for c in X_cols:
         if c == pra_col:
-            row_vals.append(Pra)
+            x_values.append(Pra)
         elif c in pca_cols:
-            row_vals.append(Pca[c])
+            x_values.append(Pca[c])
         else:
-            row_vals.append(Ca[c])
-    x_pred = pd.DataFrame([row_vals], columns=X_cols)
+            x_values.append(Ca[c])
 
-    # 総合評価の予測
-    proba = model.predict_proba(x_pred)[0]
-    classes = model.named_steps["clf"].classes_
-    pred_idx = int(np.argmax(proba))
-    pred = int(classes[pred_idx])
-    confidence = float(proba[pred_idx])
-    
-    return pred, confidence
+    return _predict_with_model(model, X_cols, x_values)
 
-def predict_overall_ws1_with_model(
-        model,
-        Ca: Dict[str, int],
-        ca_cols: List[str]
-) -> Tuple[int, float]:
+def predict_item_ws1(
+        Ca: Dict[str, int], 
+        C: List[str], 
+        df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
+        fold: int,
+        store: Optional[ModelStore] = None,
+        random_state: int = 42
+    ) -> Tuple[Dict[str, int], Dict[str, float]]:
     """
-    1回分の学習者データを使って、総合評価を選択されたモデルで推定
+    1回分の学習者データを使って、未回答項目Cを項目ごとに推定
     Parameters:
     ----------
-        model: Pipeline
-            予測に使うモデル
         Ca: Dict[str, int]
             回答済みor補完済み項目
-        ca_cols: List[str]
-            使用するチェック項目列名
+        C: List
+            残りの質問項目
+        df_train: pd.DataFrame 
+            予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
+        fold: int
+            交差検証のfold番号
+        store: Optional[ModelStore]
+            モデルストア（キャッシュ用）
+        random_state: int
+            乱数シード
     Returns:
     -------
-        pred: int
-            予測された総合評価結果
-        confidence: float
-            予測の信頼度
+        preds: Dict[str, int]
+            予測された質問回答結果
+        confidences: Dict[str, float]
+            各予測の信頼度
     """
-    x_pred = pd.DataFrame([[Ca[c] for c in ca_cols]], columns=ca_cols)
-    proba = model.predict_proba(x_pred)[0]
-    classes = model.named_steps["clf"].classes_
-    pred_idx = int(np.argmax(proba))
-    return int(classes[pred_idx]), float(proba[pred_idx])
+    preds: Dict[str, int] = {}
+    confidences: Dict[str, float] = {}
+
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
+    # configからモデル設定を取得
+    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
+    params_frozen = _freeze_params(model_params)
+
+    # Caにあるキーのうち、df_trainに存在する列のみを使用
+    ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
+
+    # 各項目の予測
+    for item in C:
+        try:
+            # 学習に使う特徴量の列
+            x_cols: List[str] = [c for c in ca_cols_exist if c != item]
+            if not x_cols or item not in df_train.columns:
+                raise ValueError("No usable features or target column missing.")
+            
+            missing = [c for c in x_cols if c not in Ca]
+            if missing:
+                raise ValueError(f"Missing features in Ca: {missing}")
+            
+            # モデルストアからモデルを取得
+            key = (
+                "ws1",
+                "item",
+                int(fold),
+                str(item),
+                tuple(x_cols),
+                str(model_type),
+                params_frozen
+            )
+
+            model = store.get(key) if store is not None else None
+            # モデルがキャッシュにない場合は新規作成・学習
+            if model is None:
+                # 学習データの作成
+                X_train = df_train[x_cols]
+                y_train = df_train[item]
+                model = _build_model(
+                    model_name=model_type,
+                    params=model_params,
+                    random_state=random_state
+                )
+                model.fit(X_train, y_train)
+                if store is not None:
+                    store.set(key, model)
+                
+            # チェック項目を推定
+            x_values = [Ca[c] for c in x_cols]
+            pred, confidence = _predict_with_model(model, x_cols, x_values)
+            preds[item] = pred
+            confidences[item] = confidence
+
+        except Exception as e:
+            print(f"[predict_item_ws1 error] target={item}: {e}")
+            preds[item] = 1
+            confidences[item] = 0.5
+
+    return preds, confidences
+
+def predict_item_ws2(
+        Pra: int, 
+        Pca: Dict[str, int], 
+        Ca: Dict[str, int], 
+        C: List[str], 
+        df_train: pd.DataFrame,
+        cfg: Dict[str, Any],
+        fold: int,
+        store: Optional[ModelStore] = None,
+        random_state: int = 42
+    ) -> Tuple[Dict[str, int], Dict[str, float]]:
+    """
+    2回分の学習者データを使って、未回答項目Cを項目ごとに推定
+    Parameters:
+    ----------
+        Pra: int
+            過去の総合評価の値
+        Pca: Dict[str, int]
+            過去のチェックリスト結果
+        Ca: Dict[str, int]
+            回答済みor補完済み項目
+        C: List
+            残りの質問項目
+        df_train: pd.DataFrame 
+            予測に使う訓練データ
+        cfg: Dict[str, Any]
+            設定辞書
+        fold: int
+            交差検証のfold番号
+        store: Optional[ModelStore]
+            モデルストア（キャッシュ用）
+        random_state: int
+            乱数シード
+    Returns:
+    -------
+        preds: Dict[str, int]
+            予測された質問回答結果
+        confidences: Dict[str, float]
+            各予測の信頼度
+    """
+    preds: Dict[str, int] = {}
+    confidences: Dict[str, float] = {}
+
+    # configがNoneの場合
+    if cfg is None:
+        raise ValueError("cfg must be provided.")
+
+    # 過去の総合評価と過去のチェック項目列名を取得
+    data_cfg = cfg.get("data", {})
+    pra_col: str = data_cfg.get("ws2", {}).get("pra_col")
+    pca_cols: List[str] = data_cfg.get("ws2", {}).get("pca_cols", [])
+
+    if pra_col is None or not pca_cols:
+        raise ValueError("pra_col and pca_cols must be specified in config for WS2.")
+    if Pra is None:
+        raise ValueError("Pra must be provided.")
+    missing_pca = [c for c in pca_cols if c not in Pca]
+    if missing_pca:
+        raise ValueError(f"Missing features in Pca: {missing_pca}")
+
+    # configからモデル設定を取得
+    model_type, model_params = _get_model_config(cfg=cfg, kind="item")
+    params_frozen = _freeze_params(model_params)
+
+    # Caにあるキーのうち、df_trainに存在する列のみを使用
+    ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
+
+    # 各項目の予測
+    for item in C:
+        try:
+            # 学習に使う特徴量の列
+            x_cols: List[str] = [pra_col] + pca_cols + [c for c in ca_cols_exist if c != item]
+            if not x_cols or item not in df_train.columns:
+                raise ValueError("No usable features or target column missing.")
+            
+            missing = []
+            missing = [c for c in x_cols if (c != pra_col and c not in pca_cols and c not in Ca)]
+            missing += [c for c in x_cols if (c in pca_cols and c not in Pca)]
+            if missing:
+                raise ValueError(f"Missing features in Pra/Pca/Ca: {missing}")
+            
+            # モデルストアからモデルを取得
+            key = (
+                "ws2",
+                "item",
+                int(fold),
+                str(item),
+                tuple(x_cols),
+                str(model_type),
+                params_frozen
+            )
+
+            model = store.get(key) if store is not None else None
+            # モデルがキャッシュにない場合は新規作成・学習
+            if model is None:
+                # 学習データの作成
+                X_train = df_train[x_cols]
+                y_train = df_train[item]
+                model = _build_model(
+                    model_name=model_type,
+                    params=model_params,
+                    random_state=random_state
+                )
+                model.fit(X_train, y_train)
+                if store is not None:
+                    store.set(key, model)
+                
+            # チェック項目を推定
+            x_values: List[int] = []
+            for c in x_cols:
+                if c == pra_col:
+                    x_values.append(Pra)
+                elif c in pca_cols:
+                    x_values.append(Pca[c])
+                else:
+                    x_values.append(Ca[c])
+
+            pred, confidence = _predict_with_model(model, x_cols, x_values)
+            preds[item] = pred
+            confidences[item] = confidence
+
+        except Exception as e:
+            print(f"[predict_item_ws2 error] target={item}: {e}")
+            preds[item] = 1
+            confidences[item] = 0.5
+        
+    return preds, confidences
