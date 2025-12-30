@@ -4,7 +4,7 @@ import argparse
 import yaml
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Tuple, Optional
 from sklearn.model_selection import KFold, StratifiedKFold
 
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--config", type=str, required=True, help="Path to the config file")
     return p.parse_args()
 
-def load_config(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
+def load_config(config_path: str = "configs/config.yaml") -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
     """
     YAML形式の設定ファイルを読み込む関数
     
@@ -92,7 +92,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     ws_cfg = data_cfg.get(mode, {})
 
     # 入力データ設定
-    input_path: str = common_cfg.get("input_path", None)
+    input_path: str = ws_cfg.get("input_path", None)
     if not input_path or not os.path.exists(input_path):
         raise ValueError(f"Input path does not exist: {input_path}")
 

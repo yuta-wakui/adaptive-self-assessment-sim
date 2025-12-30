@@ -7,7 +7,7 @@ CacheKey = Tuple[Hashable, ...]
 @dataclass
 class ModelStore:
     models: Dict[CacheKey, Pipeline] = field(default_factory=dict)
-    verbose: bool = True # ログON/OFF
+    verbose: bool = False # ログON/OFF
 
     def get(self, key: CacheKey) -> Pipeline | None:
         model = self.models.get(key)

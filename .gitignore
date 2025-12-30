@@ -15,6 +15,10 @@ venv/
 .envr/
 .venv/
 
+# Config:
+configs/*.yaml
+!configs/config.yaml
+
 # Data:
 data/*
 !data/README.md
@@ -25,7 +29,7 @@ data/*
 notebooks/
 
 # Outputs:
-outputs/*
+outputs/
 
 # Preprocess codes:
 scripts/preprocess/

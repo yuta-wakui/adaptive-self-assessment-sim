@@ -10,20 +10,6 @@ from adaptive_self_assessment.model_store import ModelStore
 
 FrozenParams = Tuple[Tuple[str, Hashable], ...]
 
-def _freeze_params(params: Dict[str, Any]) -> FrozenParams:
-    """
-    パラメータ辞書をハッシュ可能な形式に変換する内部関数
-    Parameters:
-    ----------
-        params: Dict[str, Any]
-            パラメータ辞書
-    Returns:
-    -------
-        frozen_params: Tuple[Tuple[str, Hashable], ...]
-            ハッシュ可能なパラメータのタプル
-    """
-    return tuple(sorted((str(k), params[k]) for k in params.keys()))
-
 def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, Any]]:
     """
     設定ファイルからモデル設定を読み込む内部関数
@@ -174,7 +160,6 @@ def predict_overall_ws1(
         int(fold),
         tuple(ca_cols),
         str(model_type),
-        _freeze_params(model_params)
     )
     model = store.get(key) if store is not None else None
 
@@ -265,7 +250,6 @@ def predict_overall_ws2(
         int(fold),
         tuple(X_cols),
         str(model_type),
-        _freeze_params(model_params)
     )            
 
     model = store.get(key) if store is not None else None
@@ -335,7 +319,6 @@ def predict_item_ws1(
 
     # configからモデル設定を取得
     model_type, model_params = _get_model_config(cfg=cfg, kind="item")
-    params_frozen = _freeze_params(model_params)
 
     # Caにあるキーのうち、df_trainに存在する列のみを使用
     ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
@@ -360,7 +343,6 @@ def predict_item_ws1(
                 str(item),
                 tuple(x_cols),
                 str(model_type),
-                params_frozen
             )
 
             model = store.get(key) if store is not None else None
@@ -453,7 +435,6 @@ def predict_item_ws2(
 
     # configからモデル設定を取得
     model_type, model_params = _get_model_config(cfg=cfg, kind="item")
-    params_frozen = _freeze_params(model_params)
 
     # Caにあるキーのうち、df_trainに存在する列のみを使用
     ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
@@ -480,7 +461,6 @@ def predict_item_ws2(
                 str(item),
                 tuple(x_cols),
                 str(model_type),
-                params_frozen
             )
 
             model = store.get(key) if store is not None else None
