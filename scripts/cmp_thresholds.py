@@ -41,7 +41,7 @@ def compare_thresholds(
     common_cfg = data_cfg.get("common", {})
     ws_cfg = data_cfg.get(mode, {})
 
-    input_path: str = common_cfg.get("input_path", "")
+    input_path: str = ws_cfg.get("input_path", "")
     if not input_path or not os.path.exists(input_path):
         raise ValueError(f"Input CSV path '{input_path}' does not exist.")
 

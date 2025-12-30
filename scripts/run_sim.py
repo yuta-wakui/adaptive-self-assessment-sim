@@ -236,6 +236,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         print(f"Saved fold results to: {fold_out_path}")
     
     # 全ユーザーのログデータを保存
+    logs_all_df = None
     if save_logs and all_logs:
         logs_all_df = pd.concat(all_logs, ignore_index=True)
 

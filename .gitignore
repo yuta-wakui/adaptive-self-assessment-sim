@@ -23,7 +23,7 @@ configs/*.yaml
 data/*
 !data/README.md
 !data/sample/
-!data/sample/*.csv
+!data/sample/**
 
 # notebooks:
 notebooks/
