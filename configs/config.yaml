@@ -1,63 +1,123 @@
-# Adaptive Self-Assessment Config File
+# ============================================
+# Adaptive Self-Assessment Simulation Config
+# ============================================
 
-# 実行モード
-mode: "ws1" # ws1 = 1回分データ / ws2 = 2回分データ
+# Execution mode
+mode: "ws2"  # ws1: single-session data / ws2: two-session data
 
-# モデル設定
-model:
-  item:
-    type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
-    params: {} # モデルパラメータ（任意）
-  overall:
-    type: "logistic_regression" # logistic_regression, random_forest（拡張予定）
-    params: {} # モデルパラメータ（任意）
-
-# 信頼度閾値
-thresholds:
-  RC: 0.80 # 補完の信頼度閾値
-  RI: 0.70 # 総合評価推定の信頼度閾値
-  rc_grid: [0.60, 0.70, 0.80, 0.90] # RCのグリッドサーチ用値リスト
-  ri_grid: [0.50, 0.60, 0.70, 0.80] # RIのグリッドサーチ用値リスト
-
-# データ設定
+# --------------------
+# Data settings
+# --------------------
 data:
-  # 共通設定
+  # Common settings for both ws1 and ws2
   common: 
-    skill_name: "sample" # 評価する能力名
-    id_col: "user_id" # 識別子列名
-    ignore_items: ["reflection_length", "past_reflection_length", "current_reflection_length"] # 無視する列名
-  # １回分のデータ（WS1）用
+    skill_name: "sample"  # Skill name
+    id_col: "user_id"  # User ID column
+    ignore_items:  # Columns to ignore (optional)
+      - "reflection_length"
+      - "past_reflection_length"
+      - "current_reflection_length"
+    
+  # Settings for ws1 data
   ws1:
-    input_path: "data/sample/ws1/ws1_data_sample.csv" #使用するws1データのファイルパス（csv形式）
-    ra_col: "overall_score" # 総合評価列
-    ca_cols: ["item_1", "item_2", "item_3", "item_4", "item_5", "item_6", "item_7", "item_8", "item_9", "item_10"] # 回答列リスト
-  # ２回分のデータ（WS2）用
+    input_path: "data/sample/ws1/ws1_data_sample.csv"  # File path of the ws1 dataset (CSV format)
+    overall_col: "overall_score"  # Overall score column
+    item_cols:  # List of item score columns
+      - "item_1"
+      - "item_2"
+      - "item_3"
+      - "item_4"
+      - "item_5"
+      - "item_6"
+      - "item_7"
+      - "item_8"
+      - "item_9"
+      - "item_10" 
+
+  # Settings for ws2 data
   ws2:
-    input_path: "data/sample/ws2/ws2_data_sample1.csv" # 使用するws2データのファイルパス（csv形式）
-    pra_col: "past_overall_score" # 過去の総合評価列
-    ra_col: "current_overall_score" # 今回の総合評価列
-    pca_cols: ["past_item_1", "past_item_2", "past_item_3", "past_item_4", "past_item_5", "past_item_6", "past_item_7", "past_item_8", "past_item_9", "past_item_10"] # 過去の回答列リスト
-    ca_cols: ["current_item_1", "current_item_2", "current_item_3", "current_item_4", "current_item_5", "current_item_6", "current_item_7", "current_item_8", "current_item_9", "current_item_10"] # 今回の回答列リスト
+    input_path: "data/sample/ws2/ws2_data_sample.csv"  # File path of the ws2 dataset (CSV format)
+    past_overall_col: "past_overall_score"  # Past overall score column
+    current_overall_col: "current_overall_score"  # Current overall score column
+    past_item_cols:  # List of past item score columns
+      - "past_item_1"
+      - "past_item_2"
+      - "past_item_3"
+      - "past_item_4"
+      - "past_item_5"
+      - "past_item_6"
+      - "past_item_7"
+      - "past_item_8"
+      - "past_item_9"
+      - "past_item_10" 
+    current_item_cols:  # List of current item score columns
+      - "current_item_1"
+      - "current_item_2"
+      - "current_item_3"
+      - "current_item_4"
+      - "current_item_5"
+      - "current_item_6"
+      - "current_item_7"
+      - "current_item_8"
+      - "current_item_9"
+      - "current_item_10"
 
-# クロスバリデーション
+# --------------------
+# Model settings
+# --------------------
+model:
+  # Settings for models used to estimate item scores
+  item_model: 
+    type: "logistic_regression"  # Model type (currently only "logistic_regression" is supported)
+    params: {}  # Model parameters (optional)
+    param_grid:  # Grid search parameters (optional)
+      logistic_regression:
+        C: [0.01, 0.1, 1.0, 10.0]
+        class_weight: [null, "balanced"]
+
+  # Settings for models used to estimate overall scores
+  overall:
+    type: "logistic_regression"  # Model type (currently only "logistic_regression" is supported)
+    params: {}  # Model parameters (optional)
+    param_grid:  # Grid search parameters (optional)
+      logistic_regression:
+        C: [0.01, 0.1, 1.0, 10.0]
+        class_weight: [null, "balanced"]
+
+# --------------------
+# Threshold settings
+# --------------------
+thresholds:
+  RC: 0.80  # Confidence threshold for item score estimation
+  RI: 0.70  # Confidence threshold for overall score estimation
+  rc_grid: [0.60, 0.70, 0.80, 0.90]  # Grid search values for RC
+  ri_grid: [0.50, 0.60, 0.70, 0.80]  # Grid search values for RI
+
+# --------------------
+# Cross-validation settings
+# --------------------
 cv:
-  folds: 5 # 分割数
-  stratified: true # 層化サンプリングの有無
-  random_seed: 42 # 乱数シード
+  folds: 5  # Number of folds
+  stratified: true  # Whether to use stratified sampling
+  random_seed: 42  # Random seed
 
-# 質問項目の選択方法
+# --------------------
+# Question selection method
+# --------------------
 question_selection:
-  strategy: "random" # 選択戦略（現在は"random"のみ対応）
+  strategy: "random"  # Selection strategy (currently only "random" is supported)
 
-# ログ設定
+# --------------------
+# Output settings
+# --------------------
 logging:
-  save_logs: true # ログを保存するかどうか
-  log_dir: "outputs/logs/logs_test" # ログ保存ディレクトリ
-  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
+  save_logs: true  # Whether to save logs
+  log_dir: "outputs/logs"  # Directory to save logs
+  timestamped: true  # Whether to create a timestamped directory for logs  
 
 results:
-  save_csv: true # 結果をCSVで保存するかどうか
-  output_dir: "outputs/results/tests" # 結果出力ディレクトリ
-  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
-  filename_suffix: "teamwork" # 結果ファイル名のサフィックス
-  save_fold_results: true # 各foldの結果も保存するかどうか
+  save_csv: true  # Whether to save results as CSV
+  output_dir: "outputs/results"  # Directory to save results
+  timestamped: true  # Whether to create a timestamped directory for results
+  filename_suffix: "sample"  # Filename suffix for saved results
+  save_fold_results: true  # Whether to save detailed results for each fold
