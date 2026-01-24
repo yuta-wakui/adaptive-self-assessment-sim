@@ -29,7 +29,7 @@ Each row represents one user.
 | Column | Type | Description |
 |------|------|--------------|
 | user_id | int | Unique user identifier |
-| overall_score | int | Ground-truth overall evaluation score (0-4) |
+| overall_score | int | Ground-truth overall evaluation score (1-4) |
 | reflection_length | int | Length of free-text reflection (character count) |
 | item_1 ~ item_15 | int | Responses to individual evaluation items (0-2) |
 
@@ -45,7 +45,7 @@ Each row represents one user with both past and current information.
 | Column | Type | Description |
 |------|------|--------------|
 | user_id | int | Unique user identifier |
-| past_overall_score | int | Overall score from past evaluation (0-4) |
+| past_overall_score | int | Overall score from past evaluation (1-4) |
 | past_reflection_length | int | Past reflection length (character count) |
 | past_item_1 ~ past_item_15 | int | Past responses to evaluation items (0-2) |
 | current_overall_score | int | Ground-truth current overall score (0-4) |
