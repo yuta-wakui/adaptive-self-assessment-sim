@@ -1,9 +1,8 @@
-import numpy as np
 import pytest
-from adaptive_self_assessment.selector import select_question, set_selector_seed
+from adaptive_self_assessment.components.selector import select_question, set_selector_seed
 
-def test_get_question_reproducible():
-    C = [f"item-{i}" for i in range(1, 16)]
+def test_select_question_reproducible():
+    C = [f"item-{i}" for i in range(1, 11)]
     set_selector_seed(123)
     first = select_question(C)
     set_selector_seed(123)
@@ -15,8 +14,9 @@ def test_select_question_empty_list():
         select_question([])
 
 def test_dynamic_question_selection():
-    C = [f"item-{i}" for i in range(1, 16)]    
-    set_selector_seed(np.random.randint(0,100))
+    C = [f"item-{i}" for i in range(1, 11)]    
+    set_selector_seed(123)
+
     selected_items = []
     print("=== Dynamic Question Selection Test ===")
     while C:
@@ -25,8 +25,10 @@ def test_dynamic_question_selection():
         assert q not in selected_items
         selected_items.append(str(q))
         C.remove(q)
-        print (f"Done: {selected_items}")
-        print(f"Remaining: {C}")
-    assert len(selected_items) == 15
+    assert len(selected_items) == 10
 
+from adaptive_self_assessment.components.selector import SelectionStrategy
 
+def test_select_question_unknown_strategy():
+    with pytest.raises(ValueError):
+        select_question(["item-1"], strategy="unknown")  # type: ignore
