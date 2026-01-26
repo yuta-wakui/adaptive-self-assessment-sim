@@ -28,7 +28,7 @@ def _freeze_params(params: Dict[str, Any]) -> FrozenParams:
     def freeze(v: Any) -> Hashable:
         if isinstance(v, dict):
             return _freeze_params(v)
-        elif isinstance(v, list):
+        elif isinstance(v, (list, tuple)):
             return tuple(freeze(i) for i in v)
         else:
             return v if isinstance(v, (str, int, float, bool, type(None))) else str(v)
@@ -135,14 +135,15 @@ def _cache_key(*parts: Any) -> Tuple[Hashable, ...]:
     """
     create a hashable cache key from given parts
     """
-    out: List[Hashable] = []
-    for p in parts:
-        if isinstance(p, list):
-            out.append(tuple(p))
+    def normalize(v):
+        if isinstance(v, (list, tuple)):
+            return tuple(normalize(x) for x in v)
+        elif isinstance(v, dict):
+            return tuple(sorted((k, normalize(val)) for k, val in v.items()))
         else:
-            out.append(p)
-    return tuple(out)
+            return v
 
+    return tuple(normalize(p) for p in parts)
 
 def predict_overall_ws1(
         Ca: Dict[str, int],
@@ -203,8 +204,9 @@ def predict_overall_ws1(
         "ws1",
         "overall",
         int(fold),
+        int(random_state),
         tuple(item_cols),
-        model_type,
+        str(model_type),
         frozen_params
     )
 
@@ -296,6 +298,7 @@ def predict_overall_ws2(
         "ws2",
         "overall",
         int(fold),
+        int(random_state),
         tuple(X_cols),
         str(model_type),
         frozen_params
@@ -379,7 +382,7 @@ def predict_item_ws1(
     frozen_params = _freeze_params(model_params)
 
     # only use columns that exist in df_train
-    ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
+    ca_cols_exist = [c for c in df_train.columns if c in Ca]
 
     # predict each item
     for item in C:
@@ -400,13 +403,14 @@ def predict_item_ws1(
                 "ws1",
                 "item",
                 int(fold),
+                int(random_state),
                 str(item),
                 tuple(x_cols),
                 model_type,
                 frozen_params
             )
-            model = store.get(key) if store is not None else None
 
+            model = store.get(key) if store is not None else None
             # if model is not in cache, create and train a new one
             if model is None:
                 X_train = df_train[x_cols]
@@ -435,7 +439,7 @@ def predict_item_ws1(
 
         except Exception as e:
             logger.exception(f"[predict_item_ws1 error] target={item}: {e}")
-            preds[item] = 1
+            preds[item] = df_train[item].mode(dropna=True).iloc[0]
             confidences[item] = 0.5
 
     return preds, confidences
@@ -498,9 +502,10 @@ def predict_item_ws2(
     if Pra is None:
         raise ValueError("Pra must be provided.")
 
-
     if not pra_col or not pca_cols:
         raise ValueError("pra_col and pca_cols must be specified in config for WS2.")
+
+    _validate_columns_exist(df_train, [pra_col] + pca_cols, "training data (WS2 items)")
 
     missing_pca = [c for c in pca_cols if c not in Pca]
     if missing_pca:
@@ -511,7 +516,7 @@ def predict_item_ws2(
     frozen_params = _freeze_params(model_params)
 
     # use only keys in Ca that exist as columns in df_train
-    ca_cols_exist = [c for c in Ca.keys() if c in df_train.columns]
+    ca_cols_exist = [c for c in df_train.columns if c in Ca]
 
     # predict each item
     for item in C:
@@ -524,23 +529,30 @@ def predict_item_ws2(
             if not x_cols or item not in df_train.columns:
                 raise ValueError("No usable features or target column missing.")
             
-            missing = []
-            missing = [c for c in x_cols if (c != pra_col and c not in pca_cols and c not in Ca)]
-            missing += [c for c in x_cols if (c in pca_cols and c not in Pca)]
+            missing: List[str] = []
+
+            # columns needed in Pca
+            missing += [c for c in pca_cols if c not in Pca]
+
+            # columns needed in Ca
+            ca_needed = [c for c in x_cols if c != pra_col and c not in pca_cols]
+            missing += [c for c in ca_needed if c not in Ca]
+
             if missing:
-                raise ValueError(f"Missing features in Pra/Pca/Ca: {missing}")
+                raise ValueError(f"Missing features in Pca/Ca: {missing}")
             
             key = _cache_key(
                 "ws2",
                 "item",
                 int(fold),
+                int(random_state),
                 str(item),
                 tuple(x_cols),
                 str(model_type),
                 frozen_params
             )
-            model = store.get(key) if store is not None else None
 
+            model = store.get(key) if store is not None else None
             # if model is not in cache, create and train a new one
             if model is None:
                 X_train = df_train[x_cols]
@@ -577,7 +589,7 @@ def predict_item_ws2(
 
         except Exception as e:
             logger.exception(f"[predict_item_ws2 error] target={item}: {e}")
-            preds[item] = 1
+            preds[item] = df_train[item].mode(dropna=True).iloc[0]
             confidences[item] = 0.5
         
     return preds, confidences
