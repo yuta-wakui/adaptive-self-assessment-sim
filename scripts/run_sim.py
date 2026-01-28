@@ -10,24 +10,23 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
 
-def parse_args() -> argparse.Namespace:
+def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--config", type=str, required=True, help="Path to the config file")
     return p.parse_args()
 
-def load_config(config_path: str = "configs/config.yaml") -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
+def _load_config(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
     """
-    YAML形式の設定ファイルを読み込む関数
+    load configuration from a YAML file
     
     Parameters:
     ----------
     config_path: str
-        設定ファイルのパス（デフォルト； "configs/config.yaml"）
-    
+        path to the configuration file (default: "configs/config.yaml")
     Returns:
     -------
     cfg: Dict[str, Any] 
-        読み込んだ設定内容を辞書形式で返す
+        configuration dictionary loaded from the file
     """
     with open(config_path, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f)
@@ -35,17 +34,17 @@ def load_config(config_path: str = "configs/config.yaml") -> Tuple[pd.DataFrame,
 
 def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
     """
-    データフレームの指定列の平均を計算する関数
+    calculate the mean of a specified column in a DataFrame
     Parameters:
     -----------
         df: pd.DataFrame
-            データフレーム
+            dataframe to calculate the mean from    
         col: str
-            列名
+            column name to calculate the mean
     Returns:
     -------
         Optional[float]
-            指定列の平均値。データがない場合はNoneを返す
+            mean value of the specified column, or None if the column does not exist or is empty
         """
     if col not in df.columns or df.empty:
         return None
@@ -54,44 +53,46 @@ def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
         return None
     return float(s.mean())
 
-def run_simulations(config_path: str) -> pd.DataFrame:
+def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
     """
-    1回分（WS1）または2回分（WS2）の自己評価データで適応型自己評価のシミュレーションを交差検証で実行する関数
-    設定はconfig.yamlから読み込む
+    run adaptive self-assessment simulations based on the provided configuration file
     Parameters:
     -----------
         config_path: str
-            設定ファイルのパス
+            path to the configuration file
     Returns:
     -------
         results_df: pd.DataFrame
-            シミュレーション結果のデータフレーム
+            summary of simulation results
+        logs_all_df: pd.DataFrame
+            detailed logs for all users (if saved), otherwise None
     """
-    # config設定の読み込み
-    cfg = load_config(config_path)
 
-    # 実行モード（WS1/WS2)
+    # load config
+    cfg = _load_config(config_path)
+
+    # execution mode（WS1/WS2)
     mode: str = str(cfg.get("mode", "ws1")).lower()
     if mode not in ("ws1", "ws2"):
         raise ValueError(f"Unsupported mode: {mode} (expected 'ws1' or 'ws2')")
 
-    # モデルタイプ
+    # model type
     model_cfg = cfg.get("model", {})
-    overall_model_type: str = model_cfg.get("overall", {}).get("type", "logistic_regression")
+    overall_model_type: str = model_cfg.get("overall_model", {}).get("type", "logistic_regression")
 
-    # 閾値設定
+    # thresholds
     thresholds_cfg = cfg.get("thresholds", {})
     RC_THRESHOLD: float = float(thresholds_cfg.get("RC", 0.80))
     RI_THRESHOLD: float = float(thresholds_cfg.get("RI", 0.70))
     rc_str = str(RC_THRESHOLD).replace(".", "p")
     ri_str = str(RI_THRESHOLD).replace(".", "p")    
 
-    # データ設定
+    # data settings
     data_cfg = cfg.get("data", {})
     common_cfg = data_cfg.get("common", {})
     ws_cfg = data_cfg.get(mode, {})
 
-    # 入力データ設定
+    # input data settings
     input_path: str = ws_cfg.get("input_path", None)
     if not input_path or not os.path.exists(input_path):
         raise ValueError(f"Input path does not exist: {input_path}")
@@ -99,12 +100,15 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     skill_name = common_cfg.get("skill_name", "unknown_skill")
     ignore_items: List[str] = common_cfg.get("ignore_items", [])
 
-    # ラベル列名
-    ra_col: str = ws_cfg.get("ra_col", "")
+    # label column name
+    if mode == "ws1":
+        ra_col = ws_cfg.get("overall_col", "")
+    else:
+        ra_col = ws_cfg.get("current_overall_col", "")
     if not ra_col:
-        raise ValueError("Label column name 'ra_col' must be specified in config.") 
-    
-    # 交差検証設定
+        raise ValueError("overall label column must be specified in config.")
+
+    # CV settings
     cv_cfg = cfg.get("cv", {})
     K: int = int(cv_cfg.get("folds", 5))
     stratified: bool = bool(cv_cfg.get("stratified", True))
@@ -116,10 +120,10 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         else KFold(n_splits=K, shuffle=True, random_state=random_seed)
     )
 
-    # 結果保存設定
+    # execution ID for timestamped outputs
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # シミュレーション結果保存設定
+
+    # results saving settings
     results_cfg = cfg.get("results", {})
     save_csv: bool = bool(results_cfg.get("save_csv", True))
     output_dir: str = results_cfg.get("output_dir", "outputs/results")
@@ -128,7 +132,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     save_fold_results: bool = bool(results_cfg.get("save_fold_results", False))
     suffix = f"_{filename_suffix}" if filename_suffix else ""
 
-    # 実行ログの保存設定
+    # execution log saving settings
     logging_cfg = cfg.get("logging", {})
     save_logs = bool(logging_cfg.get("save_logs", True))
     base_log_dir = logging_cfg.get("log_dir", "outputs/logs")
@@ -141,10 +145,10 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     print(f"thresholds: RC={RC_THRESHOLD}, RI={RI_THRESHOLD}")
     print(f"cv: folds={K}, stratified={stratified}, seed={random_seed}")
 
-    # データの読み込み
+    # load data
     df = pd.read_csv(input_path)
 
-    # 無視する項目の除去
+    # drop ignore_items columns
     drop_cols = [col for col in ignore_items if col in df.columns]
     if drop_cols:
         df = df.drop(columns=drop_cols)
@@ -163,9 +167,9 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     all_fold_results: List[Dict[str, Any]] = []
     all_logs: List[pd.DataFrame] = []
 
-    # 交差検証でシミュレーションを実行
-    for fold, (train_idx, test_idx) in enumerate(splitter.split(df, y), start=1):
-        print(f"---- Fold {fold}/{K} ----")
+    # CV execution
+    for fold, (train_idx, test_idx) in enumerate(splitter.split(df, y), start=0):
+        print(f"---- Fold {fold+1}/{K} ----")
         train_df = df.iloc[train_idx].copy()
         test_df = df.iloc[test_idx].copy()
 
@@ -174,7 +178,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         else:
             sim_result, logs_df = run_ws2_simulation(train_df=train_df, test_df=test_df, cfg=cfg, fold=fold)
 
-        # fold番号など補助情報だけ付与
+        # store fold results
         sim_result = dict(sim_result)
         sim_result["fold"] = fold
         sim_result["mode"] = mode
@@ -187,7 +191,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
     if save_fold_results:
         all_fold_results.extend(fold_results)
 
-    # 各foldの結果を集計
+    # summarize results
     row = {
         "mode": mode,
         "skill_name": skill_name,
@@ -210,22 +214,22 @@ def run_simulations(config_path: str) -> pd.DataFrame:
 
     results_df = pd.DataFrame([row])
 
-    # 結果の保存先ディレクトリ
+    # output directory
     subdir = os.path.join(output_dir, mode, "sim_results")
     if out_timestamped:
         subdir = os.path.join(subdir, run_id)
 
-    # 結果の保存
+    # save results CSV
     if save_csv:
         os.makedirs(subdir, exist_ok=True)
 
-        # skill平均結果の保存
+        # save summary results
         out_name = f"{mode}_results_rc{rc_str}_ri{ri_str}{suffix}.csv"
         out_path = os.path.join(subdir, out_name)
         results_df.to_csv(out_path, index=False)
         print(f"\nSaved results to: {out_path}")
     
-    # foldごとのシミュレーション結果の保存
+    # save fold results CSV
     if save_fold_results and all_fold_results:
         os.makedirs(subdir, exist_ok=True)
         
@@ -235,7 +239,7 @@ def run_simulations(config_path: str) -> pd.DataFrame:
         fold_df.to_csv(fold_out_path, index=False)
         print(f"Saved fold results to: {fold_out_path}")
     
-    # 全ユーザーのログデータを保存
+    # save user logs
     logs_all_df = None
     if save_logs and all_logs:
         logs_all_df = pd.concat(all_logs, ignore_index=True)
@@ -256,5 +260,5 @@ def run_simulations(config_path: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = _parse_args()
     run_simulations(config_path=args.config)

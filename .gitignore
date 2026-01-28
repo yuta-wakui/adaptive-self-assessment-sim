@@ -25,6 +25,9 @@ data/*
 !data/sample/
 !data/sample/**
 
+# Scripts:
+csv_to_latex_table.py
+
 # notebooks:
 notebooks/
 
@@ -36,6 +39,3 @@ scripts/preprocess/
 
 # Reports:
 reports
-
-# temp files
-temp_yaml

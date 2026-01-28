@@ -76,7 +76,7 @@ model:
         class_weight: [null, "balanced"]
 
   # Settings for models used to estimate overall scores
-  overall:
+  overall_model:
     type: "logistic_regression"  # Model type (currently only "logistic_regression" is supported)
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
