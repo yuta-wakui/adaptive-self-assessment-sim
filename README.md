@@ -226,6 +226,7 @@ Run all unit and integration tests:
 ```bash
 pytest -s
 ```
+
 Tests are located in:
 ```bash
 tests/
