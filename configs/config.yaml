@@ -97,7 +97,7 @@ thresholds:
 # Cross-validation settings
 # --------------------
 cv:
-  folds: 5  # Number of folds
+  folds: 2 # Number of folds
   stratified: true  # Whether to use stratified sampling
   random_seed: 42  # Random seed
 
