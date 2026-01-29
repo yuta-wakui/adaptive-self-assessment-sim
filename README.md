@@ -179,6 +179,7 @@ WS2:
 
 ---
 `model`
+
 Defines model used internally:
 - `item_model`: used for predicting remaining items
 - `overall_model`: used for predicting overall score
@@ -196,6 +197,7 @@ Controls the adaptive behavior:
 
 ---
 `results`
+
 Controls result file outputs:
 - `output_dir`: base directory
 - `timestamped`: whether to create timestamped subfolder
@@ -204,6 +206,7 @@ Controls result file outputs:
 
 ---
 `logging`
+
 Controls detailed use-level logs:
 - `save_logs`: whether to save logs
 - `log_dir`: base directory for logs
