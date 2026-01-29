@@ -130,7 +130,7 @@ model:
 
 thresholds:
   RC: 0.8   # confidence threshold for item completion
-  RI: 0.7   # confidence threshold for overall prediction
+  RI: 0.7   # confidence thresholds for accepting overall
 
 cv:
   folds: 5
