@@ -3,7 +3,7 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [project]
-name = "adaptive-self-assessment"
+name = "adaptive-self-assessment-sim"
 version = "0.0.1"
 description = "A simulation framework for machine-learning-driven adaptive self-assessment"
 readme = "README.md"
