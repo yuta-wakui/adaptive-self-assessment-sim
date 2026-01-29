@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+
+"""
+Run adaptive self-assessment simulations.
+This script executes simulations for WS1 and WS2 based on the provided configuration file.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: scripts/run_sim.py
+# Author: Yuta Wakui
+# Date: 2026-01-29
+# Description: Run adaptive self-assessment simulations based on configuration.
+
 import os
 import pandas as pd
 import argparse
@@ -9,6 +24,7 @@ from sklearn.model_selection import KFold, StratifiedKFold
 
 from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
+from adaptive_self_assessment.simulation.common import load_app_config
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
@@ -17,7 +33,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _load_config(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
     """
-    load configuration from a YAML file
+    load configuration from a YAML file.
     
     Parameters:
     ----------
@@ -34,18 +50,18 @@ def _load_config(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
 
 def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
     """
-    calculate the mean of a specified column in a DataFrame
+    calculate the mean of a specified column in a DataFrame.
     Parameters:
     -----------
-        df: pd.DataFrame
-            dataframe to calculate the mean from    
-        col: str
-            column name to calculate the mean
+    df: pd.DataFrame
+        dataframe to calculate the mean from    
+    col: str
+        column name to calculate the mean
     Returns:
     -------
-        Optional[float]
-            mean value of the specified column, or None if the column does not exist or is empty
-        """
+    Optional[float]
+        mean value of the specified column, or None if the column does not exist or is empty
+    """
     if col not in df.columns or df.empty:
         return None
     s = df[col].dropna()
@@ -55,7 +71,7 @@ def _calc_mean(df: pd.DataFrame, col: str) -> Optional[float]:
 
 def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
     """
-    run adaptive self-assessment simulations based on the provided configuration file
+    run adaptive self-assessment simulations based on the provided configuration file.
     Parameters:
     -----------
         config_path: str
@@ -70,49 +86,42 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
 
     # load config
     cfg = _load_config(config_path)
+    app = load_app_config(cfg)
 
     # execution mode（WS1/WS2)
     mode: str = str(cfg.get("mode", "ws1")).lower()
     if mode not in ("ws1", "ws2"):
         raise ValueError(f"Unsupported mode: {mode} (expected 'ws1' or 'ws2')")
 
+    # choose ws config
+    if mode == "ws1":
+        ws = app.ws1_data
+        ra_col = ws.overall_col
+    else:
+        ws = app.ws2_data
+        ra_col = ws.current_overall_col
+
     # model type
-    model_cfg = cfg.get("model", {})
-    overall_model_type: str = model_cfg.get("overall_model", {}).get("type", "logistic_regression")
+    overall_model_type = app.overall_model.type
 
     # thresholds
-    thresholds_cfg = cfg.get("thresholds", {})
-    RC_THRESHOLD: float = float(thresholds_cfg.get("RC", 0.80))
-    RI_THRESHOLD: float = float(thresholds_cfg.get("RI", 0.70))
+    RC_THRESHOLD: float = float(app.thresholds.rc)
+    RI_THRESHOLD: float = float(app.thresholds.ri)
     rc_str = str(RC_THRESHOLD).replace(".", "p")
     ri_str = str(RI_THRESHOLD).replace(".", "p")    
 
     # data settings
-    data_cfg = cfg.get("data", {})
-    common_cfg = data_cfg.get("common", {})
-    ws_cfg = data_cfg.get(mode, {})
+    input_path: str = ws.input_path
+    skill_name: str = app.common_data.skill_name
+    ignore_items: List[str] = app.common_data.ignore_items
 
-    # input data settings
-    input_path: str = ws_cfg.get("input_path", None)
     if not input_path or not os.path.exists(input_path):
         raise ValueError(f"Input path does not exist: {input_path}")
 
-    skill_name = common_cfg.get("skill_name", "unknown_skill")
-    ignore_items: List[str] = common_cfg.get("ignore_items", [])
-
-    # label column name
-    if mode == "ws1":
-        ra_col = ws_cfg.get("overall_col", "")
-    else:
-        ra_col = ws_cfg.get("current_overall_col", "")
-    if not ra_col:
-        raise ValueError("overall label column must be specified in config.")
-
     # CV settings
-    cv_cfg = cfg.get("cv", {})
-    K: int = int(cv_cfg.get("folds", 5))
-    stratified: bool = bool(cv_cfg.get("stratified", True))
-    random_seed: int = int(cv_cfg.get("random_seed", 42))
+    K: int = int(app.cv.folds)
+    stratified: bool = bool(app.cv.stratified)
+    random_seed: int = int(app.cv.random_seed)
 
     splitter = (
         StratifiedKFold(n_splits=K, shuffle=True, random_state=random_seed)
@@ -124,18 +133,18 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # results saving settings
-    results_cfg = cfg.get("results", {})
+    results_cfg = cfg.get("results", {}) or {}
     save_csv: bool = bool(results_cfg.get("save_csv", True))
-    output_dir: str = results_cfg.get("output_dir", "outputs/results")
+    output_dir: str = str(results_cfg.get("output_dir", "outputs/results"))
     out_timestamped: bool = bool(results_cfg.get("timestamped", True))
     filename_suffix: str = str(results_cfg.get("filename_suffix", "")).strip()
     save_fold_results: bool = bool(results_cfg.get("save_fold_results", False))
     suffix = f"_{filename_suffix}" if filename_suffix else ""
 
     # execution log saving settings
-    logging_cfg = cfg.get("logging", {})
+    logging_cfg = cfg.get("logging", {}) or {}
     save_logs = bool(logging_cfg.get("save_logs", True))
-    base_log_dir = logging_cfg.get("log_dir", "outputs/logs")
+    base_log_dir = str(logging_cfg.get("log_dir", "outputs/logs"))
     timestamped = bool(logging_cfg.get("timestamped", True))
 
     print(f"=== {mode.upper()} Simulation Started ===")
@@ -161,7 +170,8 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     if ra_col not in df.columns:
         raise ValueError(f"Label column '{ra_col}' not found in {input_path}.")
 
-    y = df[ra_col].values if stratified else None
+    # for stratifiedKFold
+    y = df[ra_col].astype(int).values if stratified else None
 
     fold_results: List[Dict[str, Any]] = []
     all_fold_results: List[Dict[str, Any]] = []
@@ -240,7 +250,7 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
         print(f"Saved fold results to: {fold_out_path}")
     
     # save user logs
-    logs_all_df = None
+    logs_all_df: Optional[pd.DataFrame] = None
     if save_logs and all_logs:
         logs_all_df = pd.concat(all_logs, ignore_index=True)
 

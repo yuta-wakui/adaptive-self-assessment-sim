@@ -17,6 +17,7 @@ Licensed under the MIT License.
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 import pandas as pd
+import os
 from sklearn.metrics import accuracy_score, f1_score
 
 LOG_REQUIRED_COLS = [
@@ -59,12 +60,14 @@ class CommonDataConfig:
 @dataclass(frozen=True)
 class WS1DataConfig:
     """Data configuration settings specific to WS1."""
+    input_path: str = ""
     overall_col: str = "" 
     item_cols: List[str] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class WS2DataConfig:
     """Data configuration settings specific to WS2."""
+    input_path: str = ""
     past_overall_col: str = ""
     past_item_cols: List[str] = field(default_factory=list)
     current_overall_col: str = ""
@@ -165,6 +168,7 @@ def load_common_data_config(cfg: Dict[str, Any]) -> CommonDataConfig:
 def load_ws1_data_config(cfg: Dict[str, Any]) -> WS1DataConfig:
     ws1 = (cfg.get("data", {}) or {}).get("ws1", {}) or {}
     out = WS1DataConfig(
+        input_path=str(ws1.get("input_path", "")),
         overall_col=str(ws1.get("overall_col", "")),
         item_cols=[str(x) for x in ws1.get("item_cols", []) or []],
     )
@@ -174,6 +178,7 @@ def load_ws1_data_config(cfg: Dict[str, Any]) -> WS1DataConfig:
 def load_ws2_data_config(cfg: Dict[str, Any]) -> WS2DataConfig:
     ws2 = (cfg.get("data", {}) or {}).get("ws2", {}) or {}
     out = WS2DataConfig(
+        input_path=str(ws2.get("input_path", "")),
         past_overall_col=str(ws2.get("past_overall_col", "")),
         past_item_cols=[str(x) for x in ws2.get("past_item_cols", []) or []],
         current_overall_col=str(ws2.get("current_overall_col", "")),
