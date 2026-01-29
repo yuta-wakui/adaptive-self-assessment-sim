@@ -83,6 +83,7 @@ pip install -e .
 ## Configuration
 
 Simulations are fully controlled by a YAML configuration file.
+
 As an example, a YAML file for running simulations on the provided sample dataset is available at  
 [configs/config.yaml](configs/config.yaml).
 
