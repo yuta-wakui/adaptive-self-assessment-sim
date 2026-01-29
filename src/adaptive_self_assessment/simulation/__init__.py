@@ -8,4 +8,7 @@ Simulation utilities for adaptive self-assessment.
 from .ws1 import run_ws1_simulation
 from .ws2 import run_ws2_simulation
 
-__all__ = ["run_ws1_simulation", "run_ws2_simulation"]
+__all__ = [
+    "run_ws1_simulation",
+    "run_ws2_simulation"
+]

@@ -1,6 +1,21 @@
+# -*- coding: utf-8 -*-
+
+"""
+Simulation module for WS2 (two-session) adaptive self-assessment.
+This module provides functions to run simulations for WS2 adaptive self-assessment.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: src/adaptive_self_assessment/simulation/ws2.py
+# Author: Yuta Wakui
+# Date: 2026-01-29
+# Description: Simulation module for WS2 adaptive self-assessment
+
 import pandas as pd
 import time
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 
 from adaptive_self_assessment.components.rng import make_selector_seed
 from adaptive_self_assessment.components.selector import select_question, set_selector_seed
@@ -8,10 +23,11 @@ from adaptive_self_assessment.components.model_store import ModelStore
 from adaptive_self_assessment.components.predictor import predict_item_ws2, predict_overall_ws2
 
 from adaptive_self_assessment.simulation.common import (
-    load_thresholds,
+    load_app_config,
     validate_columns,
     complement_accuracy,
     summarize_metrics,
+    ComplementedItem,
 )
 
 def run_ws2_simulation(
@@ -43,41 +59,31 @@ def run_ws2_simulation(
     if train_df is None or test_df is None:
         raise ValueError("train_df and test_df must be provided.")
 
-    # thresholds
-    th = load_thresholds(cfg)
-    RC_THRESHOLD = th.rc
-    RI_THRESHOLD = th.ri
+    # load config settings
+    app = load_app_config(cfg)
 
-    # config
-    data_cfg = cfg.get("data", {})
-    common_cfg = data_cfg.get("common", {})
-    ws2_cfg = data_cfg.get("ws2", {})
+    RC_THRESHOLD = app.thresholds.rc
+    RI_THRESHOLD = app.thresholds.ri
 
-    skill_name: str = common_cfg.get("skill_name", "") or "unknown Skill"
-    id_col: str = common_cfg.get("id_col", "ID")
+    id_col = app.common_data.id_col
+    skill_name = app.common_data.skill_name or "unknown_skill"
 
-    pra_col: str = ws2_cfg.get("past_overall_col", "")
-    pca_cols: List[str] = ws2_cfg.get("past_item_cols", [])
-    ra_col: str = ws2_cfg.get("current_overall_col", "")
-    ca_cols: List[str] = ws2_cfg.get("current_item_cols", [])
+    pra_col = app.ws2_data.past_overall_col
+    pca_cols = app.ws2_data.past_item_cols
+    ra_col = app.ws2_data.current_overall_col
+    ca_cols = app.ws2_data.current_item_cols
 
-    if (not pra_col) or (not pca_cols) or (not ra_col) or (not ca_cols):
-        raise ValueError(
-            "past_overall_col, past_item_cols, current_overall_col, current_item_cols "
-            "must be specified in cfg['data']['ws2']."
-        )
-    
+    # validate columns
     validate_columns(train_df, [id_col, pra_col, ra_col] + pca_cols + ca_cols, "train_df")
     validate_columns(test_df, [id_col, pra_col, ra_col] + pca_cols + ca_cols, "test_df")
 
     # model type (for logging)
-    model_cfg = cfg.get("model", {})
-    overall_model_type: str = model_cfg.get("overall_model", {}).get("type", "logistic_regression")
+    overall_model_type: str = app.overall_model.type
 
     logs: List[Dict[str, Any]] = []
     store = ModelStore()
 
-    cv_seed = int(cfg.get("cv", {}).get("random_seed", 42))
+    cv_seed = int(app.cv.random_seed)
 
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
@@ -90,7 +96,7 @@ def run_ws2_simulation(
         Ca: Dict[str, int] = {} # answered or complemented items
 
         answered_items: List[str] = [] # actually answered items
-        complemented_items: List[tuple] = [] # complemented items
+        complemented_items: List[ComplementedItem] = [] # complemented items
 
         # selector seed
         seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)

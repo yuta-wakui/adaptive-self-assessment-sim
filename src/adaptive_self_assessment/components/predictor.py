@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+
+"""
+This module provides functions for predicting overall scores and individual item responses
+using adaptive self-assessment models for WS1 and WS2 modes.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: src/adaptive_self_assessment/components/predictor.py
+# Author: Yuta Wakui
+# Date: 2026-01-29
+# Description: Predictor functions for adaptive self-assessment models
+
 import numpy as np
 import pandas as pd
 import logging
@@ -15,7 +30,7 @@ FrozenParams = Tuple[Tuple[str, Hashable], ...]
 
 def _freeze_params(params: Dict[str, Any]) -> FrozenParams:
     """
-    convert model parameters dictionary to a hashable FrozenParams tuple
+    convert model parameters dictionary to a hashable FrozenParams tuple.
     Parameters:
     ----------
         params: Dict[str, Any]
@@ -37,7 +52,7 @@ def _freeze_params(params: Dict[str, Any]) -> FrozenParams:
 
 def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, Any]]:
     """
-    read model configuration from config dictionary
+    read model configuration from config dictionary.
     Parameters:
     ----------
         cfg: Dict[str, Any]
@@ -55,19 +70,19 @@ def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, An
         raise ValueError(f"Unsupported model kind: {kind}")
 
     model_cfg = cfg.get("model", {})
-    sub_cfg = model_cfg.get(kind, {})
+    sub_cfg = model_cfg.get(kind, {}) or {}
 
-    model_type = sub_cfg.get("type", "logistic_regression")
-    params = sub_cfg.get("params", {})
+    model_type = str(sub_cfg.get("type", "logistic_regression")) # if not specified, default to logistic_regression
+    params = sub_cfg.get("params", {}) or {}
 
     if not isinstance(params, dict):
         raise ValueError(f"model.{kind}.params must be a dictionary.")
 
-    return str(model_type), params
+    return model_type, params
 
 def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42) -> Pipeline:
     """
-    build sklearn Pipeline from model name and parameters
+    build sklearn Pipeline from model name and parameters.
     Parameters:
     ----------
         model_name: str
@@ -101,7 +116,7 @@ def _predict_with_model(
         x_values: List[Any]
 ) -> Tuple[int, float]:
     """
-    predict class and confidence using the given model
+    predict class and confidence using the given model.
     Parameters:
     ----------
         model: Pipeline
@@ -125,7 +140,7 @@ def _predict_with_model(
 
 def _validate_columns_exist(df: pd.DataFrame, cols: List[str], where: str) -> None:
     """
-    check that required columns exist in the DataFrame
+    check that required columns exist in the DataFrame.
     """
     missing = [c for c in cols if c not in df.columns]
     if missing:
@@ -133,7 +148,7 @@ def _validate_columns_exist(df: pd.DataFrame, cols: List[str], where: str) -> No
 
 def _cache_key(*parts: Any) -> Tuple[Hashable, ...]:
     """
-    create a hashable cache key from given parts
+    create a hashable cache key from given parts.
     """
     def normalize(v):
         if isinstance(v, (list, tuple)):
@@ -154,7 +169,7 @@ def predict_overall_ws1(
         random_state: int = 42,
 ) -> Tuple[int, float]:
     """
-    predict overall score for WS1 using answered/complemented items Ca
+    predict overall score for WS1 using answered/complemented items Ca.
     Parameters:
     ----------
         Ca: Dict[str, int]
@@ -224,7 +239,7 @@ def predict_overall_ws1(
     # predict overall score
     x_values = [Ca[c] for c in item_cols]
     pred, confidence = _predict_with_model(model, item_cols, x_values)
-    logger.info(
+    logger.debug(
         f"[WS1][OVERALL] fold={fold} pred={pred} conf={confidence:.4f} "
         f"x_cols={item_cols} x_values={x_values}"
     )
@@ -242,7 +257,7 @@ def predict_overall_ws2(
         random_state: int = 42,
 ) -> Tuple[int, float]:
     """
-    predict overall score for WS2 using past overall Pra, past checklist Pca, and answered/complemented items Ca
+    predict overall score for WS2 using past overall Pra, past checklist Pca, and answered/complemented items Ca.
     Parameters:
     ----------
         Pra: int
@@ -326,7 +341,7 @@ def predict_overall_ws2(
             x_values.append(Ca[c])
 
     pred, confidence = _predict_with_model(model, X_cols, x_values)
-    logger.info(
+    logger.debug(
         f"[WS2][OVERALL] fold={fold} pred={pred} conf={confidence:.4f} "
         f"x_cols={X_cols} x_values={x_values}"
     )
@@ -343,7 +358,7 @@ def predict_item_ws1(
         random_state: int = 42
     ) -> Tuple[Dict[str, int], Dict[str, float]]:
     """
-    predict unanswered items C one by one using answered/complemented items Ca
+    predict unanswered items C one by one using answered/complemented items Ca.
     Parameters:
     ----------
         Ca: Dict[str, int]
@@ -381,8 +396,10 @@ def predict_item_ws1(
     model_type, model_params = _get_model_config(cfg=cfg, kind="item_model")
     frozen_params = _freeze_params(model_params)
 
-    # only use columns that exist in df_train
-    ca_cols_exist = [c for c in df_train.columns if c in Ca]
+    # only use columns that exist in Ca and df_train
+    ws1_cfg = cfg.get("data", {}).get("ws1", {})
+    item_cols: List[str] = ws1_cfg.get("item_cols", [])
+    ca_cols_exist = [c for c in item_cols if c in Ca and c in df_train.columns]
 
     # predict each item
     for item in C:
@@ -431,7 +448,7 @@ def predict_item_ws1(
             confidences[item] = confidence
 
 
-            logger.info(
+            logger.debug(
                 f"[WS1][ITEM] fold={fold} item={item} "
                 f"pred={pred} conf={confidence:.4f} "
                 f"x_cols={x_cols} x_values={x_values}"
@@ -440,7 +457,7 @@ def predict_item_ws1(
         except Exception as e:
             logger.exception(f"[predict_item_ws1 error] target={item}: {e}")
             preds[item] = df_train[item].mode(dropna=True).iloc[0]
-            confidences[item] = 0.5
+            confidences[item] = 0.0
 
     return preds, confidences
 
@@ -456,7 +473,7 @@ def predict_item_ws2(
         random_state: int = 42
     ) -> Tuple[Dict[str, int], Dict[str, float]]:
     """
-    predict unanswered items C one by one using past overall Pra, past checklist Pca, and answered/complemented items Ca
+    predict unanswered items C one by one using past overall Pra, past checklist Pca, and answered/complemented items Ca.
     Parameters:
     ----------
         Pra: int
@@ -515,8 +532,11 @@ def predict_item_ws2(
     model_type, model_params = _get_model_config(cfg=cfg, kind="item_model")
     frozen_params = _freeze_params(model_params)
 
-    # use only keys in Ca that exist as columns in df_train
-    ca_cols_exist = [c for c in df_train.columns if c in Ca]
+    # use only keys in Ca that exist as columns in Ca and df_train
+    item_cols: List[str] = ws2_cfg.get("current_item_cols", [])
+    if not item_cols:
+        raise ValueError("data.ws2.current_item_cols must be specified in config.")
+    ca_cols_exist = [c for c in item_cols if c in Ca and c in df_train.columns]
 
     # predict each item
     for item in C:
@@ -581,7 +601,7 @@ def predict_item_ws2(
             confidences[item] = confidence
 
             
-            logger.info(
+            logger.debug(
                 f"[WS2][ITEM] fold={fold} item={item} "
                 f"pred={pred} conf={confidence:.4f} "
                 f"x_cols={x_cols} x_values={x_values}"
@@ -590,6 +610,6 @@ def predict_item_ws2(
         except Exception as e:
             logger.exception(f"[predict_item_ws2 error] target={item}: {e}")
             preds[item] = df_train[item].mode(dropna=True).iloc[0]
-            confidences[item] = 0.5
+            confidences[item] = 0.0
         
     return preds, confidences

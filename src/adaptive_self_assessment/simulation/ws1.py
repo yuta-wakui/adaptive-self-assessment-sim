@@ -1,6 +1,21 @@
+# -*- coding: utf-8 -*-
+
+"""
+Simulation module for WS1 (one-session) adaptive self-assessment.
+This module provides functions to run simulations for WS1 adaptive self-assessment.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: src/adaptive_self_assessment/simulation/ws1.py
+# Author: Yuta Wakui
+# Date: 2026-01-29
+# Description: Simulation module for WS1 adaptive self-assessment
+
 import pandas as pd
 import time
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Tuple
 
 from adaptive_self_assessment.components.rng import make_selector_seed
 from adaptive_self_assessment.components.selector import select_question, set_selector_seed
@@ -8,20 +23,21 @@ from adaptive_self_assessment.components.model_store import ModelStore
 from adaptive_self_assessment.components.predictor import predict_item_ws1, predict_overall_ws1
 
 from adaptive_self_assessment.simulation.common import (
-    load_thresholds,
+    load_app_config,
     validate_columns,
     complement_accuracy,
     summarize_metrics,
+    ComplementedItem,
 )
 
 def run_ws1_simulation(
-        train_df: pd.DataFrame = None,
-        test_df: pd.DataFrame = None,
-        cfg: Dict[str, Any] = None,
+        train_df: pd.DataFrame,
+        test_df: pd.DataFrame,
+        cfg: Dict[str, Any],
         fold: int = 0
     ) -> Tuple[Dict[str, Any], pd.DataFrame]:
     """
-    run adaptive self-assessment simulation for Ws1
+    run adaptive self-assessment simulation for Ws1.
     Parameters:
     -----------
         train_df: pd.DataFrame
@@ -43,51 +59,40 @@ def run_ws1_simulation(
         raise ValueError("cfg must be provided.")
     if train_df is None or test_df is None:
         raise ValueError("train_df and test_df must be provided.")
-
-    # thresholds
-    th = load_thresholds(cfg)
-    RC_THRESHOLD = th.rc
-    RI_THRESHOLD = th.ri
-
-    # config
-    data_cfg = cfg.get("data", {})
-    common_cfg = data_cfg.get("common", {})
-    ws1_cfg = data_cfg.get("ws1", {})
-
-    id_col: str = common_cfg.get("id_col", "ID") # user ID
-    skill_name: str = common_cfg.get("skill_name", "") or "unknown Skill"
     
-    if id_col not in train_df.columns or id_col not in test_df.columns:
-        raise ValueError(f"id_col '{id_col}' not found in train_df or test_df.")
+    # load config settings
+    app = load_app_config(cfg)
 
-    ra_col: str = ws1_cfg.get("overall_col", "") # overall score column
-    ca_cols: List[str] = ws1_cfg.get("item_cols", []) # item columns for WS1
+    RC_THRESHOLD: float = app.thresholds.rc
+    RI_THRESHOLD: float = app.thresholds.ri
 
-    if not ra_col or not ca_cols:
-        raise ValueError("overall_col and item_cols must be specified in cfg['data']['ws1'].")
+    id_col: str = app.common_data.id_col # user ID
+    skill_name: str = app.common_data.skill_name or "unknown_skill"
+    
+    ra_col: str = app.ws1_data.overall_col # overall score column
+    ca_cols: List[str] = app.ws1_data.item_cols # item columns
 
     # validate columns
     validate_columns(train_df, [id_col, ra_col] + ca_cols, "train_df")
     validate_columns(test_df, [id_col, ra_col] + ca_cols, "test_df")
 
     # model type (for logging)
-    model_cfg = cfg.get("model", {})
-    overall_model_type: str = model_cfg.get("overall_model", {}).get("type", "logistic_regression")
+    overall_model_type: str = app.overall_model.type
 
     logs: List[Dict[str, Any]] = []
     store = ModelStore()
 
-    cv_seed = int(cfg.get("cv", {}).get("random_seed", 42))
+    cv_seed = int(app.cv.random_seed)
 
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
         user_id = int(user[id_col]) # get user ID
 
         C: List[str] = ca_cols.copy() # unanswered items
-        Ca = {} # answered or complemented items
+        Ca: Dict[str, int] = {} # answered or complemented items
 
-        answered_items = [] # items actually answered by user
-        complemented_items = [] # complemented items: (item, predicted_value, confidence, actual_value)
+        answered_items: List[str] = [] # items actually answered by user
+        complemented_items: List[ComplementedItem] = [] # complemented items: (item, predicted_value, confidence, actual_value)
 
         # selector seed
         seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)

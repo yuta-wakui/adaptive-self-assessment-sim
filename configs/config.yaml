@@ -11,8 +11,8 @@ mode: "ws2"  # ws1: single-session data / ws2: two-session data
 data:
   # Common settings for both ws1 and ws2
   common: 
-    skill_name: "sample"  # Skill name
-    id_col: "user_id"  # User ID column
+    skill_name: "sample"  # Skill name to use
+    id_col: "user_id"  # User ID column name
     ignore_items:  # Columns to ignore (optional)
       - "reflection_length"
       - "past_reflection_length"
@@ -71,16 +71,16 @@ model:
     type: "logistic_regression"  # Model type (currently only "logistic_regression" is supported)
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
-      logistic_regression:
-        C: [0.01, 0.1, 1.0, 10.0]
-        class_weight: [null, "balanced"]
+      logistic_regression: # model type for param grid search of item score estimation
+        C: [0.01, 0.1, 1.0, 10.0] # Inverse of regularization strength
+        class_weight: [null, "balanced"] # Class weight options
 
   # Settings for models used to estimate overall scores
   overall_model:
     type: "logistic_regression"  # Model type (currently only "logistic_regression" is supported)
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
-      logistic_regression:
+      logistic_regression: # model type for param grid search of overall score estimation
         C: [0.01, 0.1, 1.0, 10.0]
         class_weight: [null, "balanced"]
 
@@ -110,12 +110,12 @@ question_selection:
 # --------------------
 # Output settings
 # --------------------
-logging:
+logging: # Logging settings during simulation
   save_logs: true  # Whether to save logs
   log_dir: "outputs/logs"  # Directory to save logs
-  timestamped: true  # Whether to create a timestamped directory for logs  
+  timestamped: true  # Whether to create a timestamped directory for logs (e.g., 2025/01/01 -> 20250101)
 
-results:
+results: # Result summary saving settings
   save_csv: true  # Whether to save results as CSV
   output_dir: "outputs/results"  # Directory to save results
   timestamped: true  # Whether to create a timestamped directory for results

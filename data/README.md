@@ -48,7 +48,7 @@ Each row represents one user with both past and current information.
 | past_overall_score | int | Overall score from past evaluation (1-4) |
 | past_reflection_length | int | Past reflection length (character count) |
 | past_item_1 ~ past_item_15 | int | Past responses to evaluation items (0-2) |
-| current_overall_score | int | Ground-truth current overall score (0-4) |
+| current_overall_score | int | Ground-truth current overall score (1-4) |
 | current_reflection_length | int | Current reflection length (character count) |
 | current_item_1 ~ current_item_15 | int | Current responses to evaluation items (0-2) |
 
