@@ -199,6 +199,7 @@ Controls the adaptive behavior:
 `results`
 
 Controls result file outputs:
+- `save_csv`: whether to save results as CSV
 - `output_dir`: base directory
 - `timestamped`: whether to create timestamped subfolder
 - `filename_suffix`: suffix added to output filenames
