@@ -605,7 +605,7 @@ def predict_item_ws2(
                 f"[WS2][ITEM] fold={fold} item={item} "
                 f"pred={pred} conf={confidence:.4f} "
                 f"x_cols={x_cols} x_values={x_values}"
-)
+            )
 
         except Exception as e:
             logger.exception(f"[predict_item_ws2 error] target={item}: {e}")

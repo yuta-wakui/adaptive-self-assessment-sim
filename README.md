@@ -59,6 +59,13 @@ Loop:
 
     # after all item scores are obtained (answer or completion), predict overall score using Ca, Pra, Pca
     (pred_R, conf_R) ← overall_estimator.predict(Ca, Pra, Pca)
+<<<<<<< HEAD
+=======
+    
+    if conf_R < Ri:
+        # if confidence is insufficient, additional human evaluation is required
+        pred_R = request_manual_rating()
+>>>>>>> e8662c5 (fix: minor cleanup before rebase)
 
 Return pred_R, Ca
 ```
@@ -80,6 +87,7 @@ source venv/bin/activate # Windows: venv\Scripts\activate
 pip install -e .
 ```
 
+<<<<<<< HEAD
 ## Configuration
 
 Simulations are fully controlled by a YAML configuration file.
@@ -215,6 +223,10 @@ Controls detailed use-level logs:
 
 ## Usage
 ### Run simulation (cross-validation)
+=======
+### Run simulation (cross-validation)
+run with a config file:
+>>>>>>> e8662c5 (fix: minor cleanup before rebase)
 ```bash
 python scripts/run_sim.py --config configs/config.yaml
 ```
