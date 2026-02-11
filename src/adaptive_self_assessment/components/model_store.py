@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Model store for caching trained scikit-learn Pipeline models.
+Model store for caching trained scikit-learn models.
 This module defines the ModelStore class, which provides a simple in-memory cache
 for storing and retrieving trained models based on unique cache keys.
 
@@ -15,62 +15,44 @@ Licensed under the MIT License.
 # Description: Model store for caching trained models
 
 from dataclasses import dataclass, field
-from typing import Dict, Hashable, Tuple
+from typing import Dict, Hashable, Tuple, Optional
 import logging
 
-from sklearn.pipeline import Pipeline
+from sklearn.base import BaseEstimator
 
 logger = logging.getLogger(__name__)
 
-# Type alias for cache keys used in the model cache dictionary
 CacheKey = Tuple[Hashable, ...]
 
 @dataclass
 class ModelStore:
-    """
-    In-memory cache for trained scikit-learn Pipeline models.
+    """A simple in-memory cache for trained scikit-learn estimators."""
+    models: Dict[CacheKey, BaseEstimator] = field(default_factory=dict)
 
-    This class is used to avoid retraining identical models during
-    simulation by caching models with hashable cache keys.
-    """
-    models: Dict[CacheKey, Pipeline] = field(default_factory=dict)
+    def clear(self) -> None:
+        """Clear all cached models."""
+        self.models.clear()
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("[CACHE][CLEAR] All cached models have been cleared.")
 
-    def get(self, key: CacheKey) -> Pipeline | None:
-        """
-        Retrieve a model from the cache.
+    def size(self) -> int:
+        """Return the number of cached models."""
+        return len(self.models)
 
-        Parameters
-        ----------
-        key : CacheKey
-            Cache key representing model configuration.
-
-        Returns
-        -------
-        Pipeline or None
-            Cached model if present, otherwise None.
-        """
+    def get(self, key: CacheKey) -> Optional[BaseEstimator]:
+        """Retrieve a cached model by its key."""
         model = self.models.get(key)
 
         if logger.isEnabledFor(logging.DEBUG):
             if model is None:
-                logger.debug("[ModelStore][MISS] key=%s size=%d", key, len(self.models))
+                logger.debug(f"[CACHE][MISS] key={key} (size={self.size()})")
             else:
-                logger.debug("[ModelStore][HIT] key=%s size=%d", key, len(self.models))
+                logger.debug(f"[CACHE][HIT] key={key} (size={self.size()})")
 
         return model
 
-    def set(self, key: CacheKey, model: Pipeline) -> None:
-        """
-        Store a trained model in the cache.
-
-        Parameters
-        ----------
-        key : CacheKey
-            Cache key representing model configuration.
-        model : Pipeline
-            Trained scikit-learn Pipeline model.
-        """
+    def set(self, key: CacheKey, model: BaseEstimator) -> None:
+        """Cache a trained model with the given key."""
         self.models[key] = model
-
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("[ModelStore][STORE] key=%s size=%d", key, len(self.models))
+            logger.debug(f"[CACHE][STORE] key={key} (size={self.size()})")
