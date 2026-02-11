@@ -18,6 +18,7 @@ import pandas as pd
 import logging
 from typing import List, Tuple, Dict, Any, Optional, Hashable
 
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -80,9 +81,9 @@ def _get_model_config(cfg: Dict[str, Any], kind: str) -> Tuple[str, Dict[str, An
 
     return model_type, params
 
-def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42) -> Pipeline:
+def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42) -> BaseEstimator:
     """
-    build sklearn Pipeline from model name and parameters.
+    build a model pipeline based on the specified model name and parameters.
     Parameters:
     ----------
         model_name: str
@@ -93,25 +94,24 @@ def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42
             random seed
     Returns:
     -------
-        model: Pipeline
+        model: BaseEstimator
             constructed model pipeline
     """  
 
     if model_name == "logistic_regression":
         base_params = {
             "max_iter": 5000,
-            "class_weight": "balanced",
             "random_state": random_state,
         }
         base_params.update(params) # override parameters
 
         clf = LogisticRegression(**base_params)
         return Pipeline([("scaler", StandardScaler()), ("clf", clf)])
-    else:
-        raise ValueError(f"Unsupported model_name: {model_name}")
+    
+    raise ValueError(f"Unsupported model_name: {model_name}")
 
 def _predict_with_model(
-        model: Pipeline,
+        model: BaseEstimator,
         x_cols: List[str],
         x_values: List[Any]
 ) -> Tuple[int, float]:
@@ -119,7 +119,7 @@ def _predict_with_model(
     predict class and confidence using the given model.
     Parameters:
     ----------
-        model: Pipeline
+        model: BaseEstimator
             model used for prediction
         x_cols: List[str]
             feature column names to use
@@ -131,11 +131,31 @@ def _predict_with_model(
             predicted class label
         confidence: float
             prediction confidence
+    Raises:
+    -------
+        ValueError
+            If the model does not support predict_proba()
     """
     x_pred = pd.DataFrame([x_values], columns=x_cols)
+
+    # check if model supports predict_proba
+    if not hasattr(model, "predict_proba"):
+        raise ValueError("Model does not support predict_proba().")
+
     proba = model.predict_proba(x_pred)[0]
-    classes = model.named_steps["clf"].classes_
     pred_idx = int(np.argmax(proba))
+
+    classes = None
+
+    named_steps = getattr(model, "named_steps", None)
+    if isinstance(named_steps, dict) and "clf" in named_steps and hasattr(named_steps["clf"], "classes_"):
+        classes = named_steps["clf"].classes_
+    elif hasattr(model, "classes_"):
+        classes = model.classes_ 
+
+    if classes is None:
+        raise ValueError("Cannot retrieve class labels from the model.")
+
     return int(classes[pred_idx]), float(proba[pred_idx])
 
 def _validate_columns_exist(df: pd.DataFrame, cols: List[str], where: str) -> None:
@@ -193,13 +213,13 @@ def predict_overall_ws1(
     """
     # if config is None
     if cfg is None:
-        raise ValueError("cfg must be provided.")
+        raise ValueError("config must be provided.")
 
     # get column names
     data_cfg = cfg.get("data", {})
     ws1_cfg = data_cfg.get("ws1", {})
     item_cols: List[str] = ws1_cfg.get("item_cols", [])
-    overall_col: str = ws1_cfg.get("overall_col")
+    overall_col: Optional[str] = ws1_cfg.get("overall_col")
 
     if overall_col is None or not item_cols:
         raise ValueError("overall_col and item_cols must be specified in config for WS1.")
@@ -285,14 +305,14 @@ def predict_overall_ws2(
     """
     # if config is None
     if cfg is None:
-        raise ValueError("cfg must be provided.")
+        raise ValueError("config must be provided.")
 
     # get column names
     ws2_cfg = cfg.get("data", {}).get("ws2", {})
-    pra_col: str = ws2_cfg.get("past_overall_col")
+    pra_col: Optional[str] = ws2_cfg.get("past_overall_col")
     pca_cols: List[str] = ws2_cfg.get("past_item_cols", [])
     ca_cols: List[str] = ws2_cfg.get("current_item_cols", [])
-    ra_col: str = ws2_cfg.get("current_overall_col")
+    ra_col: Optional[str] = ws2_cfg.get("current_overall_col")
 
     if pra_col is None or not pca_cols or not ca_cols or ra_col is None:
         raise ValueError("pra_col, pca_cols, ca_cols and ra_col must be specified in config for WS2.")
@@ -309,7 +329,7 @@ def predict_overall_ws2(
     model_type, model_params = _get_model_config(cfg=cfg, kind="overall_model")
     frozen_params = _freeze_params(model_params)
 
-    key  = _cache_key(
+    key = _cache_key(
         "ws2",
         "overall",
         int(fold),
@@ -363,7 +383,7 @@ def predict_item_ws1(
     ----------
         Ca: Dict[str, int]
             answered or complemented items
-        C: List
+        C: List[str]
             remaining questions
         df_train: pd.DataFrame 
             training data used for prediction
@@ -390,7 +410,7 @@ def predict_item_ws1(
 
     # if config is None
     if cfg is None:
-        raise ValueError("cfg must be provided.")
+        raise ValueError("config must be provided.")
 
     # get model configuration from config
     model_type, model_params = _get_model_config(cfg=cfg, kind="item_model")
@@ -447,7 +467,6 @@ def predict_item_ws1(
             preds[item] = pred
             confidences[item] = confidence
 
-
             logger.debug(
                 f"[WS1][ITEM] fold={fold} item={item} "
                 f"pred={pred} conf={confidence:.4f} "
@@ -482,7 +501,7 @@ def predict_item_ws2(
             past checklist results
         Ca: Dict[str, int]
             answered or complemented items
-        C: List
+        C: List[str]
             remaining question items
         df_train: pd.DataFrame 
             training data used for prediction
@@ -509,15 +528,12 @@ def predict_item_ws2(
 
     # if cfg is None
     if cfg is None:
-        raise ValueError("cfg must be provided.")
+        raise ValueError("config must be provided.")
 
     # get past overall rating and past checklist column names
     ws2_cfg = cfg.get("data", {}).get("ws2", {})
-    pra_col: str = ws2_cfg.get("past_overall_col")
+    pra_col: Optional[str] = ws2_cfg.get("past_overall_col")
     pca_cols: List[str] = ws2_cfg.get("past_item_cols", [])
-
-    if Pra is None:
-        raise ValueError("Pra must be provided.")
 
     if not pra_col or not pca_cols:
         raise ValueError("pra_col and pca_cols must be specified in config for WS2.")
@@ -546,13 +562,8 @@ def predict_item_ws2(
 
             # features used for training
             x_cols: List[str] = [pra_col] + pca_cols + [c for c in ca_cols_exist if c != item]
-            if not x_cols or item not in df_train.columns:
-                raise ValueError("No usable features or target column missing.")
             
             missing: List[str] = []
-
-            # columns needed in Pca
-            missing += [c for c in pca_cols if c not in Pca]
 
             # columns needed in Ca
             ca_needed = [c for c in x_cols if c != pra_col and c not in pca_cols]
@@ -600,7 +611,6 @@ def predict_item_ws2(
             preds[item] = pred
             confidences[item] = confidence
 
-            
             logger.debug(
                 f"[WS2][ITEM] fold={fold} item={item} "
                 f"pred={pred} conf={confidence:.4f} "
