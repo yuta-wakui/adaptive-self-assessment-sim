@@ -15,52 +15,72 @@ Licensed under the MIT License.
 
 import numpy as np
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 class SelectionStrategy(str, Enum):
     """
     Question selection strategies
     """
     RANDOM = "random"
+    FEATURE_IMPORTANCE = "feature_importance"
+    FEATURE_IMPORTANCE_WITH_NOISE = "feature_importance_with_noise"
 
-# Module-level RNG for question selection
-_rng = np.random.default_rng(42)
-
-def set_selector_seed(seed: int) -> None:
+class QuestionSelector:
     """
-    Set the random seed for the initial selector RNG
+    Question selector for adaptive self-assessment.
+
+    Each selector instance maintains its own random number generator (RNG) state to ensure
+    reproducibly and independence across users or folds.
+    """
     
-    Parameters:
-    ----------
-    seed: int
-        Seed value for reproducibility
-    """
-    global _rng
-    _rng = np.random.default_rng(seed)
+    def __init__(
+            self,
+            strategy: SelectionStrategy = SelectionStrategy.RANDOM,
+            seed: Optional[int] = None
+        ):
+        """
+        Initialize the QuestionSelector.
 
-def select_question(C: List[str], strategy: SelectionStrategy = SelectionStrategy.RANDOM) -> str:
-    """
-    Select a question item from the remaining list C based on the specified strategy.
-    
-    Parameters:
-    ----------
-    C: list of str
-        Remaining question items to select from
-    strategy: SelectionStrategy
-        Strategy for selecting the question item (default: RANDOM)
-    Returns:
-        str: Selected question item
-    Raises:
-    -------
-    ValueError
-        If 'C" is empty
-    NotImplementedError
-        If the strategy is not implemented
-    """
-    if len(C) == 0: 
-        raise ValueError("The list of question items is empty.")
+        Parameters:
+        ----------
+        strategy: SelectionStrategy
+            Strategy for selecting question items (default: RANDOM)
+        seed: Optional[int]
+            Seed for the random number generator (default: None)
+        """
+        self.strategy = strategy
+        self.rng = np.random.default_rng(seed)
 
-    if strategy == SelectionStrategy.RANDOM:
-        return str(_rng.choice(C))
-    
-    raise NotImplementedError(f"Unknown selection strategy: {strategy}")
+    def select(self, C: List[str]) -> str:
+        """
+        Select a question item from the remaining list C based on the selector's strategy.
+
+        Parameters:
+        ----------
+        C: list of str
+            Remaining question items to select from
+        Returns:
+            str: Selected question item
+        Raises:
+        -------
+        ValueError
+            If 'C" is empty
+        NotImplementedError
+            If the strategy is not implemented
+        """
+        if not C: 
+            raise ValueError("The list of question items is empty.")
+        
+        if self.strategy == SelectionStrategy.RANDOM:
+            return str(self.rng.choice(C))
+        
+        if self.strategy == SelectionStrategy.FEATURE_IMPORTANCE:
+            raise NotImplementedError("FEATURE_IMPORTANCE not yet implemented.")
+
+        if self.strategy == SelectionStrategy.FEATURE_IMPORTANCE_WITH_NOISE:
+            raise NotImplementedError(
+                "FEATURE_IMPORTANCE_WITH_NOISE not yet implemented."
+            )
+
+        
+        raise NotImplementedError(f"Unknown selection strategy: {self.strategy}")
