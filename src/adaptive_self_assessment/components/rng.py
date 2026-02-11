@@ -18,21 +18,25 @@ from typing import Hashable
 
 def make_selector_seed(cv_seed: int, fold: int, user_id: Hashable) -> int:
     """
-    generate a reproducible random seed for question selection based on cv_seed, fold, and user_id.
+    generate a reproducible random seed for question selection.
+
+    The seed is deterministically derived from (cv_seed, fold, user_id) via SHA-256.
+    Note: reproducibility assumes `user_id` has a stable string representation across runs.
+
     Parameters:
     ----------
     cv_seed: int
         cross-validation random seed
     fold: int
         fold number
-    user_id: str
-        user identifier
+    user_id: Hashable
+        user identifier (e.g., str or int)
     
     Returns:
     -------
     int
-        generated random seed
+        generated seed in the range[0, 2^32-1]
     """
-    seed_str = f"selector|{cv_seed}_{fold}_{user_id}".encode("utf-8")
-    seed_hash = hashlib.sha256(seed_str).hexdigest()
-    return int(seed_hash[:8], 16)  # convert to 32-bit integer
+    seed_bytes = f"selector|{cv_seed}_{fold}_{user_id}".encode("utf-8")
+    digest = hashlib.sha256(seed_bytes).digest()
+    return int.from_bytes(digest[:4], "big", signed=False)
