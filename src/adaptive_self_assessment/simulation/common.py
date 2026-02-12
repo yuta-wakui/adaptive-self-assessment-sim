@@ -17,8 +17,9 @@ Licensed under the MIT License.
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 import pandas as pd
-import os
 from sklearn.metrics import accuracy_score, f1_score
+
+from adaptive_self_assessment.components.selector import SelectionStrategy
 
 LOG_REQUIRED_COLS = [
         "actual_ra", "predicted_ra", "is_confident",
@@ -74,6 +75,11 @@ class WS2DataConfig:
     current_item_cols: List[str] = field(default_factory=list)
 
 @dataclass(frozen=True)
+class SelectionConfig:
+    """Configuration for question selection strategy."""
+    strategy: SelectionStrategy = SelectionStrategy.RANDOM
+
+@dataclass(frozen=True)
 class AppConfig:
     """ Overall application configuration."""
     thresholds: Thresholds = field(default_factory=Thresholds)
@@ -83,6 +89,7 @@ class AppConfig:
     common_data: CommonDataConfig = field(default_factory=CommonDataConfig)
     ws1_data: WS1DataConfig = field(default_factory=WS1DataConfig)
     ws2_data: WS2DataConfig = field(default_factory=WS2DataConfig)
+    selector: SelectionConfig = field(default_factory=SelectionConfig)
 
 # ----------------------------
 # Config validation
@@ -187,6 +194,28 @@ def load_ws2_data_config(cfg: Dict[str, Any]) -> WS2DataConfig:
     validate_ws2_config(out)
     return out
 
+def load_selector_config(cfg: Dict[str, Any]) -> SelectionConfig:
+    selector = (cfg.get("question_selection", {}) or {})
+    raw = selector.get("strategy", SelectionStrategy.RANDOM.value)
+
+    # if already enum
+    if isinstance(raw, SelectionStrategy):
+        return SelectionConfig(strategy=raw)
+    
+    s = str(raw).strip().lower()
+
+    # try lowercase
+    try:
+        return SelectionConfig(strategy=SelectionStrategy(s))
+    except ValueError:
+        pass
+
+    # try uppercase
+    try:
+        return SelectionConfig(strategy=SelectionStrategy[s.upper()])
+    except KeyError:
+        return SelectionConfig(strategy=SelectionStrategy.RANDOM)
+
 def load_app_config(cfg: Dict[str, Any]) -> AppConfig:
     return AppConfig(
         thresholds=load_thresholds(cfg),
@@ -196,6 +225,7 @@ def load_app_config(cfg: Dict[str, Any]) -> AppConfig:
         common_data=load_common_data_config(cfg),
         ws1_data=load_ws1_data_config(cfg),
         ws2_data=load_ws2_data_config(cfg),
+        selector=load_selector_config(cfg),
     )
 
 # ----------------------------
