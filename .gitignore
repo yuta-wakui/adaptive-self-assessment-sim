@@ -15,9 +15,12 @@ venv/
 .envr/
 .venv/
 
+# claude:
+.claude/
+
 # Config:
-configs/*.yaml
-!configs/config.yaml
+configs/soft_skills/
+configs/kaggle/
 
 # Data:
 data/*
