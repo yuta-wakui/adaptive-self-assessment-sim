@@ -8,7 +8,7 @@ Copyright (c) 2026 Yuta Wakui
 Licensed under the MIT License.
 """
 
-# File: src/adaptive_self_assessment/simulation/ws2.py
+# File: src/adaptive_self_assessment/simulation/adaptive_ws2.py
 # Author: Yuta Wakui
 # Date: 2026-01-29
 # Description: Simulation module for WS2 adaptive self-assessment
@@ -18,7 +18,7 @@ import time
 from typing import List, Dict, Any, Tuple
 
 from adaptive_self_assessment.components.rng import make_selector_seed
-from adaptive_self_assessment.components.selector import select_question, set_selector_seed
+from adaptive_self_assessment.components.selector import QuestionSelector
 from adaptive_self_assessment.components.model_store import ModelStore
 from adaptive_self_assessment.components.predictor import predict_item_ws2, predict_overall_ws2
 
@@ -55,7 +55,7 @@ def run_ws2_simulation(
             detailed logs for each user
     """
     if cfg is None:
-        raise ValueError("cfg must be provided.")
+        raise ValueError("config must be provided.")
     if train_df is None or test_df is None:
         raise ValueError("train_df and test_df must be provided.")
 
@@ -84,6 +84,7 @@ def run_ws2_simulation(
     store = ModelStore()
 
     cv_seed = int(app.cv.random_seed)
+    selector_strategy = app.selector.strategy
 
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
@@ -98,15 +99,17 @@ def run_ws2_simulation(
         answered_items: List[str] = [] # actually answered items
         complemented_items: List[ComplementedItem] = [] # complemented items
 
-        # selector seed
-        seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)
-        set_selector_seed(seed)
+        # per-user selector seed (reproducible)
+        seed = int(make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id))
+        
+        # selector instance holds RNG state
+        selector = QuestionSelector(strategy=selector_strategy, seed=seed)
 
         start_time = time.time()   
 
         # repeat until all items are answered or complemented
         while C:
-            ci = select_question(C) # select next question
+            ci = selector.select(C) # select next question
 
             # ask user and get actual answer
             answer = int(user[ci]) # use actual answer from test_df
@@ -177,6 +180,7 @@ def run_ws2_simulation(
             "RI_THRESHOLD": float(RI_THRESHOLD),
             "num_train": len(train_df),
             "model_type": overall_model_type,
+            "selector_strategy": selector_strategy.value,
             "user_seed": seed,
             "cv_seed": cv_seed,
             "fold": fold,
@@ -195,6 +199,7 @@ def run_ws2_simulation(
         "RI_THRESHOLD": float(RI_THRESHOLD),
         "num_train": len(train_df),
         "num_test": len(test_df),
+        "selector_strategy": selector_strategy.value,
         **metrics,
     }
 
