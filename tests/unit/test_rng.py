@@ -1,4 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+Unit tests for the RNG component of adaptive self-assessment simulations.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: tests/unit/test_rng.py
+# Author: Yuta Wakui
+# Date: 2026-02-11
+# Description: Unit tests for RNG component
+
 import pytest
+
 from adaptive_self_assessment.components.rng import make_selector_seed
 
 def test_make_selector_seed_reproducible():

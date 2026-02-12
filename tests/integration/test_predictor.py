@@ -1,15 +1,30 @@
+# -*- coding: utf-8 -*-
+"""
+Integration tests for predictors used during adaptive self-assessment simulations.
+This module tests the item-level and overall-level predictors used during adaptive self-assessment simulations.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: tests/integration/test_predictor.py
+# Author: Yuta Wakui
+# Date: 2026-02-11
+# Description: Integration tests for predictors during adaptive self-assessment
+
 import os
 import pandas as pd
 import numpy as np
 import pytest
 import yaml
 
-from adaptive_self_assessment.components.selector import select_question, set_selector_seed
+from adaptive_self_assessment.components.selector import QuestionSelector
 from adaptive_self_assessment.components.predictor import (
     predict_item_ws1, predict_item_ws2,
     predict_overall_ws1, predict_overall_ws2
 )
 from adaptive_self_assessment.components.model_store import ModelStore
+
 
 def _load_config(config_path: str = "configs/config.yaml"):
     """
@@ -29,6 +44,7 @@ def _load_config(config_path: str = "configs/config.yaml"):
         raise FileNotFoundError(f"Config file not found: {config_path}")
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
+
 
 @pytest.mark.parametrize("ws1_path", [
     "data/sample/ws1/ws1_data_sample.csv",
@@ -58,10 +74,12 @@ def test_predict_item_ws1(ws1_path):
     Ca = {}
     C = ca_cols_ws1.copy()
 
-    set_selector_seed(123)
+    selector = QuestionSelector(seed=123)
 
     while C:
-        selected_question = select_question(C)
+        selected_question = selector.select(C)
+        assert selected_question in C
+
         Ca[selected_question] = int(df_w1.loc[used_id, selected_question])
         C.remove(selected_question)
 
@@ -99,6 +117,7 @@ def test_predict_item_ws2(ws2_path):
     ca_cols_ws2 = ws2_cfg.get("current_item_cols", [])
     if not pra_col_ws2 or not pca_cols_ws2 or not ca_cols_ws2:
         raise ValueError("past_overall_col, past_item_cols and current_item_cols must be specified in config for WS2.")
+    
     np.random.seed(0)
     store = ModelStore()
     fold = 0
@@ -113,10 +132,12 @@ def test_predict_item_ws2(ws2_path):
     Ca = {}
     C = ca_cols_ws2.copy()
 
-    set_selector_seed(123)
+    selector = QuestionSelector(seed=123)
 
     while C:
-        selected_question = select_question(C)
+        selected_question = selector.select(C)
+        assert selected_question in C
+        
         Ca[selected_question] = int(df_w2.loc[used_id, selected_question])
         C.remove(selected_question)
 

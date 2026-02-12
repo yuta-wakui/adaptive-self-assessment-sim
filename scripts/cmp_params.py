@@ -9,8 +9,8 @@ from itertools import product
 from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
-from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
+from adaptive_self_assessment.simulation.adaptive_ws1 import run_ws1_simulation
+from adaptive_self_assessment.simulation.adaptive_ws2 import run_ws2_simulation
 
 
 def load_config(path: str) -> Dict[str, Any]:

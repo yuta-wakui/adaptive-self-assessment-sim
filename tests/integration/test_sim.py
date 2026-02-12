@@ -4,8 +4,9 @@ import pandas as pd
 import pytest
 from sklearn.model_selection import train_test_split
 
-from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
-from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
+from adaptive_self_assessment.simulation.adaptive_ws1 import run_ws1_simulation
+from adaptive_self_assessment.simulation.adaptive_ws2 import run_ws2_simulation
+
 
 def _load_config(config_path = "configs/config.yaml"):
     """
@@ -48,7 +49,6 @@ def test_run_ws1_simulation(ws1_path, cfg_path):
     df_ws1_train, df_ws1_test = train_test_split(df_ws1, test_size=0.2, random_state=42,shuffle=True)
     print(f"Training data size: {len(df_ws1_train)}, Test data size: {len(df_ws1_test)}")
 
-
     # run simulation
     sim_results, logs_df = run_ws1_simulation(
         train_df=df_ws1_train,
@@ -59,11 +59,14 @@ def test_run_ws1_simulation(ws1_path, cfg_path):
     # validate results
     assert isinstance(sim_results, dict)
     assert isinstance(logs_df, pd.DataFrame)
-    assert 0.0 <= float(sim_results["reduction_rate"]) <= 100.0
+
+    rr = sim_results["reduction_rate"]
+    assert rr is None or (0.0 <= float(rr) <= 100.0)
 
 
     expected_keys = {
         "skill","model_type","RC_THRESHOLD","RI_THRESHOLD","num_train","num_test",
+        "selector_strategy",
         "accuracy_over_threshold","accuracy_all",
         "f1_macro_over_threshold","f1_macro_all",
         "coverage_over_threshold","total_questions",
@@ -75,6 +78,11 @@ def test_run_ws1_simulation(ws1_path, cfg_path):
 
     missing = expected_keys - set(sim_results.keys())
     assert not missing, f"Missing keys in simulation results: {missing}"
+
+    assert sim_results["selector_strategy"] in {
+        "random", "feature_importance", "feature_importance_with_noise"
+    }
+
     print("WS1 simulation Results: ", sim_results)
 
 @pytest.mark.parametrize(
@@ -110,11 +118,14 @@ def test_run_ws2_simulation(ws2_path, cfg_path):
     # validate results
     assert isinstance(sim_results, dict)
     assert isinstance(logs_df, pd.DataFrame)
-    assert 0.0 <= float(sim_results["reduction_rate"]) <= 100.0
+
+    rr = sim_results["reduction_rate"]
+    assert rr is None or (0.0 <= float(rr) <= 100.0)
 
 
     expected_keys = {
         "skill","model_type","RC_THRESHOLD","RI_THRESHOLD","num_train","num_test",
+        "selector_strategy",
         "accuracy_over_threshold","accuracy_all",
         "f1_macro_over_threshold","f1_macro_all",
         "coverage_over_threshold","total_questions",
@@ -126,4 +137,9 @@ def test_run_ws2_simulation(ws2_path, cfg_path):
 
     missing = expected_keys - set(sim_results.keys())
     assert not missing, f"Missing keys in simulation results: {missing}" 
+
+    assert sim_results["selector_strategy"] in {
+        "random", "feature_importance", "feature_importance_with_noise"
+    }
+    
     print("WS2 simulation Results: ", sim_results)

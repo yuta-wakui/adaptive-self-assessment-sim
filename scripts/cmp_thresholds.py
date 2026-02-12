@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.metrics import accuracy_score, f1_score
 
-from adaptive_self_assessment.simulation.ws1 import run_ws1_simulation
-from adaptive_self_assessment.simulation.ws2 import run_ws2_simulation
+from adaptive_self_assessment.simulation.adaptive_ws1 import run_ws1_simulation
+from adaptive_self_assessment.simulation.adaptive_ws2 import run_ws2_simulation
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
