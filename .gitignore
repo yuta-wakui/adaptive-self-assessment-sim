@@ -37,8 +37,5 @@ notebooks/
 # Outputs:
 outputs/
 
-# Preprocess codes:
-scripts/preprocess/
-
 # Reports:
 reports
