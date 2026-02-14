@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+Integration tests for adaptive self-assessment simulations.
+This module tests the end-to-end functionality of the adaptive self-assessment simulations for both WS1
+and WS2.
+
+Copyright (c) 2026 Yuta Wakui
+Licensed under the MIT License.
+"""
+
+# File: tests/integration/test_sim.py
+# Author: Yuta Wakui
+# Date: 2026-02-11
+# Description: Integration tests for adaptive self-assessment simulations (WS1 and WS2)
+
 import os
 import yaml
 import pandas as pd
