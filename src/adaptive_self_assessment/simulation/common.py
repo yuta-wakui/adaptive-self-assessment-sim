@@ -319,16 +319,16 @@ def summarize_metrics(
     y_true = logs_df["actual_ra"].astype(int)
     y_pred = logs_df["predicted_ra"].astype(int)
 
-    accuracy_all = float(accuracy_score(y_true, y_pred) * 100.0)
-    f1_macro_all = float(f1_score(y_true, y_pred, average="macro") * 100.0)
+    accuracy_all = float(accuracy_score(y_true, y_pred))
+    f1_macro_all = float(f1_score(y_true, y_pred, average="macro"))
 
     confident_df = logs_df[logs_df["is_confident"].astype(bool)]
     if not confident_df.empty:
         y_true_c = confident_df["actual_ra"].astype(int)
         y_pred_c = confident_df["predicted_ra"].astype(int)
-        accuracy_over = float(accuracy_score(y_true_c, y_pred_c) * 100)
-        f1_over = float(f1_score(y_true_c, y_pred_c, average="macro") * 100)
-        coverage = float(len(confident_df) / len(logs_df) * 100)
+        accuracy_over = float(accuracy_score(y_true_c, y_pred_c))
+        f1_over = float(f1_score(y_true_c, y_pred_c, average="macro"))
+        coverage = float(len(confident_df) / len(logs_df))
     else:
         accuracy_over = f1_over = coverage = None
 
@@ -338,10 +338,10 @@ def summarize_metrics(
     if total_questions <= 0:
         reduction_rate = None
     else:
-        reduction_rate = float((1.0 - avg_answered / total_questions) * 100.0)
+        reduction_rate = float((1.0 - avg_answered / total_questions))
 
     valid_comp = logs_df[logs_df["num_complemented_questions"] > 0]
-    avg_comp_acc = float(valid_comp["complement_accuracy"].mean() * 100.0) if not valid_comp.empty else None
+    avg_comp_acc = float(valid_comp["complement_accuracy"].mean()) if not valid_comp.empty else None
 
     avg_rt = max_rt = min_rt = None
 
