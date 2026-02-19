@@ -240,7 +240,7 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
 
     print(f"\n=== {mode.upper()} Simulation Results ===")
     print(f"average_answered_questions: {results_df['avg_answered_questions'].iloc[0]:.2f} / {results_df['total_questions'].iloc[0]:.0f}")
-    print(f"reduction_rate: {results_df['avg_reduction_rate'].iloc[0]:.2f}%")
+    print(f"reduction_rate: {results_df['avg_reduction_rate'].iloc[0]*100:.1f}%")
     print(f"accuracy_all: {results_df['accuracy_all'].iloc[0]:.4f}")
     print(f"f1_macro_all: {results_df['f1_macro_all'].iloc[0]:.4f}")
 
