@@ -1,237 +1,206 @@
 # adaptive-self-assessment-sim
+少ない質問数で評価精度を保つ ー 機械学習による適応型自己評価シミュレーションのフレームワーク
 
-A simulation framework for machine-learning-driven adaptive self-assessment systems, 
-designed to reduce response burden while maintaining assessment accuracy.
+大量の質問に対する回答負担を軽減するため、
+回答パターンに応じて質問を選択し、
+未回答項目を機械学習で補完して評価結果を推定します。
 
-## Overview
-This repository provides a simulation framework for a **machine-learning-based adaptive self-assessment system**.  
-The system dynamically selects or complements assessment items based on response patterns and previous assessment results, aiming to **achieve the same assessment accuracy with fewer items** compared to using the full set of items.
+この手法で「すべての質問に答えなくても同じ評価ができるか？」を検証できます。
 
-The framework supports:
-- **WS1 — Single-session self-assessment**
-- **WS2 — Two-session self-assessment (previous + current session)**
+教育評価・アンケート設計・自己評価システムの研究および設計検討に利用できます。
 
-## Motivation
-Structured self-assessment can support self-understanding and personal growth.  
-However, a major challenge is **assessment fatigue caused by a large number of questions or items**, which can reduce motivation and response quality.
-
-This project simulates an **adaptive self-assessment mechanism** that:
-- presents items sequentially (currently random selection),
-- complements unanswered items using machine learning when reliability is sufficient,
-- predicts an overall score after all items are answered or complemented.
-
-The objective is to **reduce the number of required responses without degrading overall prediction performance**.
-
-## Adaptive-self-assessment Algorithm
-The decision process is controlled by **RC**, which is a confidence threshold used to determine whether unanswered items can be safely complemented by the model.
-
-The pseudo-code below summarizes the overall process:
-
-```pseudo
-Inputs:
-    I      : full set of items
-    Pra    : previous overall score (WS2 only, else null)
-    Pca    : previous item results (WS2 only, else null)
-    Rc     : confidence threshold for unanswered item completion
-
-Outputs:
-    pred_R  : predicted overall score
-    Ca      : final set of answered or complemented items
-
-Initialization:
-    C  ← I  # unanswered item set
-    Ca ← {} # answered or complemented item list
-
-Loop:
-    while C is not empty:
-        ci ← select_next_item(C)   # e.g., random, entropy-based, or model-guided
-        ans ← query_response(ci)  # ask the user and record response
-        Ca[ci] = ans
-        remove ci from C
-
-        # predict unanswered items
-        (pred_C, conf_C) ← completion_model.predict(C, Ca, Pra, Pca)
-
-        for each j in C:
-            if conf_C[j] ≥ Rc:
-                Ca[j] = pred_C[j]
-                remove j from C
-
-    # after all item scores are obtained (answer or completion), predict overall score using Ca, Pra, Pca
-    (pred_R, conf_R) ← overall_estimator.predict(Ca, Pra, Pca)
-
-Return pred_R, Ca
+## デモ
+サンプルデータでシミュレーションを実行できます。
+```bash
+python scripts/run_adaptive_sim.py --config configs/config.yaml
 ```
 
-## Requirements
-### Clone repositories
+実行例：
+```text
+=== WS2 Simulation Started ===
+input: data/sample/ws2/ws2_data_sample.csv
+skill: sample
+model(overall): logistic_regression
+question_selection.strategy: random
+thresholds: RC=0.8, RI=0.7
+cv: folds=2, stratified=True, seed=42
+Dropped ignore_items columns: ['past_reflection_length', 'current_reflection_length']
+
+==== WS2: sample ====
+csv: data/sample/ws2/ws2_data_sample.csv
+n_rows: 100, n_cols: 33
+---- Fold 1/2 ----
+---- Fold 2/2 ----
+
+=== WS2 Simulation Results ===
+average_answered_questions: 3.88 / 10
+reduction_rate: 61.2%
+accuracy_all: 0.6400
+f1_macro_all: 0.4566
+
+Saved results to: outputs/results/ws2/sim_results/20260219_194536/ws2_results_rc0p8_ri0p7_sample.csv
+Saved fold results to: outputs/results/ws2/sim_results/20260219_194536/ws2_fold_results_rc0p8_ri0p7_sample.csv
+Saved user logs to: outputs/logs/ws2/20260219_194536/ws2_user_logs_rc0p8_ri0p7_sample.csv
+
+=== WS2 Simulation Completed ===
+```
+
+## 特徴
+- 機械学習による適応型自己評価アルゴリズムのシミュレーション環境
+- 単回評価（WS1）と継続評価（WS2；過去＋現在）に対応
+- 回答パターンに応じた質問選択戦略に対応（現在はランダム選択のみ実装）
+- 未回答項目を信頼度に基づいて逐次補完
+- Cross-validationによる再現性のある性能評価
+- YAML設定のみで実験条件・モデル・閾値を変更可能
+- 全項目回答（非適応型）との比較により質問削減率と精度のトレードを検証可能
+
+## インストール
+
+### 前提条件
+- Python 3.10 以上
+- pip
+
+### インストール手順
 ```bash
+# 1. リポジトリをクローン
 git clone https://github.com/yuta-wakui/adaptive-self-assessment-sim.git
-cd adaptive-self-assessment-sim
-```
 
-### (Recommended) Create a virtual environment
-```bash
+# 2. ディレクトリ移動
+cd adaptive-self-assessment-sim
+
+# 3. 仮想環境の作成
 python -m venv venv
-source venv/bin/activate # Windows: venv\Scripts\activate
-```
-### Install (development mode)
-```bash
+
+# 4. 仮想環境の有効化
+source venv/bin/activate # macOS / Linux
+venv\Scripts\activate # Windows
+
+# 5. パッケージをインストール
 pip install -e .
 ```
 
-## Configuration
-
-Simulations are fully controlled by a YAML configuration file.
-
-As an example, a YAML file for running simulations on the provided sample dataset is available at  
-[configs/config.yaml](configs/config.yaml).
-
-A typical configuration structure is shown below:
-
-```yaml
-mode: ws2  # ws1 or ws2
-
-data:
-  common:
-    skill_name: "sample"
-    id_col: "ID"
-    ignore_items:
-      - "reflection_length"
-
-  ws1:
-    input_path: "data/sample/ws1/ws1_data_sample.csv"
-    overall_col: "overall_score"
-    item_cols:
-      - "item_1"
-      - "item_2"
-      - "item_3"
-
-  ws2:
-    input_path: "data/sample/ws2/ws2_data_sample.csv"
-    past_overall_col: "past_overall"
-    past_item_cols:
-      - "past_item_1"
-      - "past_item_2"
-    current_overall_col: "current_overall"
-    current_item_cols:
-      - "current_item_1"
-      - "current_item_2"
-  
-model:
-  item_model:
-    type: "logistic_regression"
-    params:
-      max_iter: 1000
-  overall_model:
-    type: "logistic_regression"
-    params:
-      max_iter: 1000
-
-thresholds:
-  RC: 0.8   # confidence threshold for item completion
-  RI: 0.7   # confidence thresholds for accepting overall
-
-cv:
-  folds: 5
-  stratified: true
-  random_seed: 42
-
-results:
-  save_csv: true
-  output_dir: "outputs/results"
-  timestamped: true
-  filename_suffix: "sample"
-  save_fold_results: true
-
-logging:
-  save_logs: true
-  log_dir: "outputs/logs"
-  timestamped: true
-```
-
-### Key Sections Explained
-`mode`
-
-Select the simulation type:
-- `ws1`: single-session simulation
-- `ws2`: two-session simulation (use past + current data)
-
----
-`data`
-
-Specifies dataset structure.
-
-Common settings:
-- `skill_name`: label used in logs/results
-- `id_col`: use identifier column
-- `ignore_items`: columns to be dropped before simulation (Optional)
-
-WS1:
-- `input_path`: path to CSV
-- `overall_col`: ground-truth overall score
-- `item_cols`: question item columns
-
-WS2:
-- Extends WS1 by separating past/current session columns:
-  - `past_overall_col`, `past_item_cols`
-  - `current_overall_col`, `current_item_cols`
-
----
-`model`
-
-Defines model used internally:
-- `item_model`: used for predicting remaining items
-- `overall_model`: used for predicting overall score
-
-Currently supports:
-- `logistic_regression` (via scikit-learn)
-Model parameters are passed directly to scikit-learn.
-
----
-`thresholds`
-
-Controls the adaptive behavior:
-- `RC`: threshold for complementing remaining items
-- `RI`: confidence thresholds for accepting overall prediction
-
----
-`results`
-
-Controls result file outputs:
-- `save_csv`: whether to save results as CSV
-- `output_dir`: base directory
-- `timestamped`: whether to create timestamped subfolder
-- `filename_suffix`: suffix added to output filenames
-- `save_fold_results`: whether to export per-fold results
-
----
-`logging`
-
-Controls detailed use-level logs:
-- `save_logs`: whether to save logs
-- `log_dir`: base directory for logs
-- `timestamped`: whether to timestamp directories
-
-## Usage
-### Run simulation (cross-validation)
+### インストール確認
 ```bash
-python scripts/run_sim.py --config configs/config.yaml
+python -c "import adaptive_self_assessment; print('OK')"
 ```
-By default, results and logs will be saved under:
-- `outputs/results/`
-- `outputs/logs/`
 
-## Testing
-Run all unit and integration tests:
+### （任意）テスト用依存関係
+テストを実行する場合：
 ```bash
-pytest -s
+pip install pytest
+pytest
 ```
 
-Tests are located in:
+## 使用方法
+
+### 1. 設定ファイルを確認
+サンプル設定ファイルをそのまま使用できます。
+
+`configs/config.yaml`
+
+### 2. 適応型自己評価シミュレーションの実行
 ```bash
-tests/
+python scripts/run_adaptive_sim.py --config configs/config.yaml
 ```
 
-## License
+実行するとクロスバリデーションによるシミュレーションが行われ、
+結果がコンソールに表示されます。
+
+出力例：
+```text
+=== WS2 Simulation Results ===
+average_answered_questions: 3.88 / 10
+reduction_rate: 61%
+accuracy_all: 0.6400
+f1_macro_all: 0.4566
+```
+
+また、結果ファイルは以下に保存されます：
+```bash
+outputs/results/
+outputs/logs/
+```
+
+### 3. 非適応（ベースライン）との比較
+```bash
+python scripts/run_non_adaptive_sim.py --config configs/config.yaml
+```
+
+これにより「全項目回答」との性能比較が可能です。
+
+出力例：
+```text
+=== WS2 Simulation Results ===
+Use all questions:
+accuracy_all: 0.6800
+f1_macro_all: 0.5003
+```
+
+## シミュレーション設定
+### データセット配置
+本フレームワークではCSV形式の評価データを使用します。
+
+データは任意の場所に配置できますが、管理しやすさの観点から`data/`ディレクトリに置くことを推奨します。
+
+### 実験設定（YAMLファイル）
+シミュレーションの挙動はYAMLファイルで制御します。
+
+まずはテンプレートをコピーして使用してください。（[configs/template.yaml](configs/template.yaml)）
+
+各パラメータの役割は以下の通りです。
+
+### configパラメータ一覧
+
+| セクション                 | パラメータ                 | 型            | 説明                                       |
+| --------------------- | --------------------- | ------------ | ---------------------------------------- |
+| `mode`                | `ws1 / ws2`           | string       | 使用するデータ形式を指定（`ws1`: 単回評価 / `ws2`: 継続評価）  |
+| `data.common`         | `skill_name`          | string       | 評価対象スキル名（ログ・出力に使用）                       |
+|                       | `id_col`              | string       | 評価対象者の識別子列名                              |
+|                       | `ignore_items`        | list[string] | 評価に使用しない列名のリスト（任意）                       |
+| `data.ws1`            | `input_path`          | string       | WS1用CSVデータのパス                            |
+|                       | `overall_col`         | string       | 総合評価の正解ラベル列                              |
+|                       | `item_cols`           | list[string] | 質問項目列（カテゴリ値または0/1を想定）                    |
+| `data.ws2`            | `input_path`          | string       | WS2用CSVデータのパス                            |
+|                       | `past_overall_col`    | string       | 過去の総合評価列                                 |
+|                       | `past_item_cols`      | list[string] | 過去の質問項目列（カテゴリ値または0/1）                    |
+|                       | `current_overall_col` | string       | 今回の総合評価列                                 |
+|                       | `current_item_cols`   | list[string] | 今回の質問項目列（カテゴリ値または0/1）                    |
+| `model.item_model`    | `type`                | string       | 未回答項目補完モデル（現在は `logistic_regression` のみ） |
+|                       | `params`              | dict         | モデルパラメータ（任意）                             |
+| `model.overall_model` | `type`                | string       | 総合評価推定モデル（現在は `logistic_regression` のみ）  |
+|                       | `params`              | dict         | モデルパラメータ（任意）                             |
+| `thresholds`          | `RC`                  | float        | 未回答項目補完の信頼度閾値                             |
+|                       | `RI`                  | float        | 総合評価を確定する信頼度閾値                           |
+| `cv`                  | `folds`               | int          | クロスバリデーション分割数                            |
+|                       | `stratified`          | bool         | 層化分割を行うか                                 |
+|                       | `random_seed`         | int          | 乱数シード                                    |
+| `question_selection`  | `strategy`            | string       | 質問選択戦略（現在は `"random"` のみ）                |
+| `results`             | `save_csv`            | bool         | 結果CSVを保存するか                              |
+|                       | `output_dir`          | string       | 出力先ディレクトリ                                |
+|                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
+|                       | `filename_suffix`     | string       | 出力ファイル名のサフィックス                           |
+|                       | `save_fold_results`   | bool         | 各foldの結果を保存するか                           |
+| `logging`             | `save_logs`           | bool         | 個別ログを保存するか                               |
+|                       | `log_dir`             | string       | ログ保存先ディレクトリ                              |
+|                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
+
+## テスト
+本リポジトリでは、主要コンポーネントのユニットテストと、サンプルデータを用いた統合テストを提供します。
+### 実行方法
+```bash
+pytest 
+```
+
+標準出力も含めて確認したい場合：
+```bash
+pytest -s 
+```
+
+特定のテストだけ実行したい場合：
+```bash
+pytest tests/unit/test_selector.py -s
+pytest tests/integration/test_sim.py -s
+```
+
+## ライセンス
 MIT License
