@@ -5,7 +5,7 @@
 回答パターンに応じて質問を選択し、
 未回答項目を機械学習で補完して評価結果を推定します。
 
-この手法で「すべての質問に答えなくても同じ評価ができるか？」を検証できます。
+本フレームワークにより、「すべての質問に答えなくても同じ評価ができるか？」を検証できます。
 
 教育評価・アンケート設計・自己評価システムの研究および設計検討に利用できます。
 
@@ -130,7 +130,7 @@ python scripts/run_non_adaptive_sim.py --config configs/config.yaml
 
 出力例：
 ```text
-=== WS2 Simulation Results ===
+=== WS2 Non-Adaptive Results ===
 Use all questions:
 accuracy_all: 0.6800
 f1_macro_all: 0.5003
