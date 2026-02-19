@@ -203,5 +203,5 @@ def run_ws2_simulation(
         **metrics,
     }
 
-    print(f"[DEBUG][WS2][fold={fold}] model cache size = {len(store.models)}")
+    # print(f"[DEBUG][WS2][fold={fold}] model cache size = {len(store.models)}")
     return sim_results, logs_df
