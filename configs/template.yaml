@@ -1,0 +1,91 @@
+# =================================================================
+# Adaptive Self-Assessment Simulation Template Config
+# =================================================================
+
+# --------------------
+# 実行モード
+# --------------------
+mode: "ws1" # ws1 = data.ws1を使用 / ws2 = data.ws2を使用
+
+# --------------------
+# データ設定
+# --------------------
+data:
+  # 共通設定
+  common: 
+    skill_name: "skill_name" # 評価する能力名（ログ・出力に使用）
+    id_col: "ID" # 識別子列名
+    ignore_items: # 無視する列名（任意）
+    - "ignore_col_1"
+    - "ignore_col_2"
+
+  # １回分のデータ（WS1）用
+  ws1:
+    input_path: "data/your_ws1.csv" # ws1データのファイルパス（csv形式）
+    overall_col: "assessment-result" # 総合評価列（正解ラベル）
+    item_cols: # チェックリスト項目の列リスト（カテゴリ値または0/1を想定）
+    - "item-1"
+    - "item-2"
+    - "item-3"
+
+  # ２回分のデータ（WS2）用
+  ws2:
+    input_path: "data/your_ws2.csv" # ws2データのファイルパス（csv形式）
+    current_overall_col: "current-assessment-result" # 今回の総合評価列
+    past_overall_col: "past-assessment-result" # 過去の総合評価列
+    past_item_cols:  # 過去のチェックリスト項目の列リスト（カテゴリ値または0/1）
+      - "past_item_1"
+      - "past_item_2"
+    current_item_cols: # 今回のチェックリスト項目の列リスト（カテゴリ値または0/1）
+      - "current_item_1"
+      - "current_item_2"
+
+# --------------------
+# モデル設定
+# --------------------
+model:
+  # 未回答項目推定モデル設定
+  item_model:
+    type: "logistic_regression" # 現在は"logistic_regression"のみ対応
+    params: {} # モデルパラメータ（任意）
+
+  # 総合評価推定モデル設定
+  overall_model:
+    type: "logistic_regression" # 現在は"logistic_regression"のみ対応
+    params: {} # モデルパラメータ（任意）
+
+# --------------------
+# 閾値設定
+# --------------------
+thresholds:
+  RC: 0.80 # 補完の信頼度閾値
+  RI: 0.70 # 総合評価推定の信頼度閾値
+
+# --------------------
+# クロスバリデーション設定
+# --------------------
+cv:
+  folds: 5 # 分割数
+  stratified: true # 層化サンプリングの有無
+  random_seed: 42 # 乱数シード
+
+# --------------------
+# 質問項目の選択方法
+# --------------------
+question_selection:
+  strategy: "random" # 選択戦略（現在は"random"のみ対応）
+
+# --------------------
+# 出力設定
+# --------------------
+logging: # ログ設定
+  save_logs: true # ログを保存するかどうか
+  log_dir: "outputs/logs" # ログ保存ディレクトリ
+  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
+
+results: # 結果設定
+  save_csv: true # 結果をCSVで保存するかどうか
+  output_dir: "outputs/results" # 結果出力ディレクトリ
+  timestamped: true # タイムスタンプ付きディレクトリを作成するかどうか
+  filename_suffix: "act" # 結果ファイル名のサフィックス
+  save_fold_results: true # 各foldの結果も保存するかどうか
