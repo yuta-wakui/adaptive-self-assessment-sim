@@ -147,7 +147,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
     base_log_dir = str(logging_cfg.get("log_dir", "outputs/logs"))
     timestamped = bool(logging_cfg.get("timestamped", True))
 
-    print(f"=== {mode.upper()} Non-Adaptive Simulation Started ===")
+    print(f"\n=== {mode.upper()} Non-Adaptive Simulation Started ===")
     print(f"input: {input_path}")
     print(f"skill: {skill_name}")
     print(f"model(overall): {overall_model_type}")
@@ -222,6 +222,11 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
 
     results_df = pd.DataFrame([row])
 
+    print(f"\n=== {mode.upper()} Simulation Results ===")
+    print("Use all questions:")
+    print(f"accuracy_all: {results_df['accuracy_all'].iloc[0]:.4f}")
+    print(f"f1_macro_all: {results_df['f1_macro_all'].iloc[0]:.4f}")
+
     # output directory
     subdir = os.path.join(output_dir, mode, "non_adaptive_sim_results")
     if out_timestamped:
@@ -263,7 +268,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
         logs_all_df.to_csv(log_out_path, index=False)
         print(f"Saved user logs to: {log_out_path}")
 
-    print(f"=== {mode.upper()} Non-Adaptive Simulation Completed ===")
+    print(f"\n=== {mode.upper()} Non-Adaptive Simulation Completed ===")
     return results_df, logs_all_df
 
 
