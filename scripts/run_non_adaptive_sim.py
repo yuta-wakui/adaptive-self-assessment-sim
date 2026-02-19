@@ -222,7 +222,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
 
     results_df = pd.DataFrame([row])
 
-    print(f"\n=== {mode.upper()} Simulation Results ===")
+    print(f"\n=== {mode.upper()} Non-Adaptive Results ===")
     print("Use all questions:")
     print(f"accuracy_all: {results_df['accuracy_all'].iloc[0]:.4f}")
     print(f"f1_macro_all: {results_df['f1_macro_all'].iloc[0]:.4f}")
