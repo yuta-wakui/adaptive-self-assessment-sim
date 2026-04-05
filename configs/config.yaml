@@ -97,8 +97,9 @@ thresholds:
 # Cross-validation settings
 # --------------------
 cv:
-  folds: 2 # Number of folds
-  stratified: true  # Whether to use stratified sampling
+  method: "kfold"  # Cross-validation method: "kfold" or "loo" (leave-one-out)
+  folds: 2  # Number of folds (used only when method is "kfold")
+  stratified: true  # Whether to use stratified sampling (used only when method is "kfold")
   random_seed: 42  # Random seed
 
 # --------------------
