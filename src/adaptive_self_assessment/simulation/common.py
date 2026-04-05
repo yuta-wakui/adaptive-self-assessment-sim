@@ -40,6 +40,7 @@ class Thresholds:
 @dataclass(frozen=True)
 class CVConfig:
     """Configuration for cross-validation."""
+    method: str = "kfold"  # "kfold" or "loo"
     folds: int = 5
     stratified: bool = True
     random_seed: int = 42
@@ -100,7 +101,9 @@ def validate_thresholds(t: Thresholds) -> None:
         raise ValueError(f"thresholds must be in [0, 1]: rc={t.rc}, ri={t.ri}")
 
 def validate_cv_config(cv: CVConfig) -> None:
-    if cv.folds <= 1:
+    if cv.method not in ("kfold", "loo"):
+        raise ValueError(f"cv.method must be 'kfold' or 'loo': {cv.method}")
+    if cv.method == "kfold" and cv.folds <= 1:
         raise ValueError(f"cv.folds must be >= 2: {cv.folds}")
 
 def validate_ws1_config(ws1: WS1DataConfig) -> None:
@@ -134,10 +137,12 @@ def load_thresholds(cfg: Dict[str, Any]) -> Thresholds:
 
 def load_cv_config(cfg: Dict[str, Any]) -> CVConfig:
     cv = cfg.get("cv", {}) or {}
+    method = str(cv.get("method", "kfold")).strip().lower()
     strat = cv.get("stratified", True)
     if not isinstance(strat, bool):
         raise ValueError("cv.stratified must be a boolean.")
     out = CVConfig(
+        method=method,
         folds=int(cv.get("folds", 5)),
         stratified=strat,
         random_seed=int(cv.get("random_seed", 42)),
