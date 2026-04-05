@@ -19,7 +19,7 @@ import yaml
 
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Optional
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold
 
 from adaptive_self_assessment.simulation.non_adaptive_ws1 import run_non_adaptive_ws1_simulation
 from adaptive_self_assessment.simulation.non_adaptive_ws2 import run_non_adaptive_ws2_simulation
@@ -119,15 +119,19 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
         raise ValueError(f"Input path does not exist: {input_path}")
 
     # CV settings
+    cv_method: str = app.cv.method
     K: int = int(app.cv.folds)
     stratified: bool = bool(app.cv.stratified)
     random_seed: int = int(app.cv.random_seed)
 
-    splitter = (
-        StratifiedKFold(n_splits=K, shuffle=True, random_state=random_seed)
-        if stratified
-        else KFold(n_splits=K, shuffle=True, random_state=random_seed)
-    )
+    if cv_method == "loo":
+        splitter = LeaveOneOut()
+    else:
+        splitter = (
+            StratifiedKFold(n_splits=K, shuffle=True, random_state=random_seed)
+            if stratified
+            else KFold(n_splits=K, shuffle=True, random_state=random_seed)
+        )
 
     # execution ID for timestamped outputs
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -152,7 +156,10 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
     print(f"skill: {skill_name}")
     print(f"model(overall): {overall_model_type}")
     print(f"thresholds: RI={RI_THRESHOLD}")
-    print(f"cv: folds={K}, stratified={stratified}, seed={random_seed}")
+    if cv_method == "loo":
+        print(f"cv: method=loo, seed={random_seed}")
+    else:
+        print(f"cv: method=kfold, folds={K}, stratified={stratified}, seed={random_seed}")
 
     # load data
     df = pd.read_csv(input_path)
@@ -171,7 +178,12 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
         raise ValueError(f"Label column '{ra_col}' not found in {input_path}.")
 
     # for stratifiedKFold
-    y = df[ra_col].astype(int).values if stratified else None
+    if cv_method == "loo":
+        y = None
+        n_splits = len(df)
+    else:
+        y = df[ra_col].astype(int).values if stratified else None
+        n_splits = K
 
     fold_results: List[Dict[str, Any]] = []
     all_fold_results: List[Dict[str, Any]] = []
@@ -179,7 +191,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
 
     # CV execution
     for fold, (train_idx, test_idx) in enumerate(splitter.split(df, y), start=0):
-        print(f"---- Fold {fold+1}/{K} ----")
+        print(f"---- {'LOO' if cv_method == 'loo' else 'Fold'} {fold+1}/{n_splits} ----")
         train_df = df.iloc[train_idx].copy()
         test_df = df.iloc[test_idx].copy()
 
@@ -206,7 +218,8 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
         "selection_strategy": None,
         "RC_THRESHOLD": None,
         "RI_THRESHOLD": RI_THRESHOLD,
-        "num_folds": K,
+        "cv_method": cv_method,
+        "num_folds": n_splits,
         "total_questions": _calc_mean(df_fold, "total_questions"),
         "avg_answered_questions": _calc_mean(df_fold, "avg_answered_questions"),
         "avg_complemented_questions": _calc_mean(df_fold, "avg_complemented_questions"),
