@@ -165,9 +165,9 @@ f1_macro_all: 0.5003
 |                       | `past_item_cols`      | list[string] | 過去の質問項目列（カテゴリ値または0/1）                    |
 |                       | `current_overall_col` | string       | 今回の総合評価列                                 |
 |                       | `current_item_cols`   | list[string] | 今回の質問項目列（カテゴリ値または0/1）                    |
-| `model.item_model`    | `type`                | string       | 未回答項目補完モデル（現在は `logistic_regression` のみ） |
+| `model.item_model`    | `type`                | string       | 未回答項目補完モデル（`"logistic_regression"` / `"random_forest"`） |
 |                       | `params`              | dict         | モデルパラメータ（任意）                             |
-| `model.overall_model` | `type`                | string       | 総合評価推定モデル（現在は `logistic_regression` のみ）  |
+| `model.overall_model` | `type`                | string       | 総合評価推定モデル（`"logistic_regression"` / `"random_forest"`）  |
 |                       | `params`              | dict         | モデルパラメータ（任意）                             |
 | `thresholds`          | `RC`                  | float        | 未回答項目補完の信頼度閾値                             |
 |                       | `RI`                  | float        | 総合評価を確定する信頼度閾値                           |
