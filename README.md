@@ -171,8 +171,9 @@ f1_macro_all: 0.5003
 |                       | `params`              | dict         | モデルパラメータ（任意）                             |
 | `thresholds`          | `RC`                  | float        | 未回答項目補完の信頼度閾値                             |
 |                       | `RI`                  | float        | 総合評価を確定する信頼度閾値                           |
-| `cv`                  | `folds`               | int          | クロスバリデーション分割数                            |
-|                       | `stratified`          | bool         | 層化分割を行うか                                 |
+| `cv`                  | `method`              | string       | CV手法（`"kfold"`: K分割交差検証 / `"loo"`: Leave-One-Out交差検証） |
+|                       | `folds`               | int          | 分割数（`method: "kfold"` のときのみ有効）            |
+|                       | `stratified`          | bool         | 層化分割を行うか（`method: "kfold"` のときのみ有効）       |
 |                       | `random_seed`         | int          | 乱数シード                                    |
 | `question_selection`  | `strategy`            | string       | 質問選択戦略（現在は `"random"` のみ）                |
 | `results`             | `save_csv`            | bool         | 結果CSVを保存するか                              |
