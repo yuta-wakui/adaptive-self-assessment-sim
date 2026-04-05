@@ -19,6 +19,7 @@ import logging
 from typing import List, Tuple, Dict, Any, Optional, Hashable
 
 from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -107,7 +108,17 @@ def _build_model(model_name: str, params: Dict[str, Any], random_state: int = 42
 
         clf = LogisticRegression(**base_params)
         return Pipeline([("scaler", StandardScaler()), ("clf", clf)])
-    
+
+    if model_name == "random_forest":
+        base_params = {
+            "n_estimators": 100,
+            "random_state": random_state,
+        }
+        base_params.update(params) # override parameters
+
+        clf = RandomForestClassifier(**base_params)
+        return Pipeline([("clf", clf)])
+
     raise ValueError(f"Unsupported model_name: {model_name}")
 
 def _predict_with_model(

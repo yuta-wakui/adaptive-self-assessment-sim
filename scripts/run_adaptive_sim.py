@@ -110,6 +110,7 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
         ra_col = ws.current_overall_col
 
     # model type
+    item_model_type = app.item_model.type
     overall_model_type = app.overall_model.type
 
     # question selection strategy
@@ -230,7 +231,8 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     row = {
         "mode": mode,
         "skill_name": skill_name,
-        "model": overall_model_type,
+        "item_model": item_model_type,
+        "overall_model": overall_model_type,
         "selection_strategy": selector_strategy.value,
         "RC_THRESHOLD": RC_THRESHOLD,
         "RI_THRESHOLD": RI_THRESHOLD,

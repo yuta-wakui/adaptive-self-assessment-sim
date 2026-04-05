@@ -68,7 +68,7 @@ data:
 model:
   # Settings for models used to estimate item scores
   item_model:
-    type: "logistic_regression"  # Model type: "logistic_regression" or "random_forest"
+    type: "random_forest"  # Model type: "logistic_regression" or "random_forest"
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
       logistic_regression: # model type for param grid search of item score estimation
@@ -81,7 +81,7 @@ model:
 
   # Settings for models used to estimate overall scores
   overall_model:
-    type: "logistic_regression"  # Model type: "logistic_regression" or "random_forest"
+    type: "random_forest"  # Model type: "logistic_regression" or "random_forest"
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
       logistic_regression: # model type for param grid search of overall score estimation
@@ -105,7 +105,7 @@ thresholds:
 # Cross-validation settings
 # --------------------
 cv:
-  method: "loo"  # Cross-validation method: "kfold" or "loo" (leave-one-out)
+  method: "kfold"  # Cross-validation method: "kfold" or "loo" (leave-one-out)
   folds: 2  # Number of folds (used only when method is "kfold")
   stratified: true  # Whether to use stratified sampling (used only when method is "kfold")
   random_seed: 42  # Random seed

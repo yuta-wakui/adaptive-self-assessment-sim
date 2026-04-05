@@ -104,6 +104,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
         sim_fn = run_non_adaptive_ws2_simulation
 
     # model type
+    item_model_type = app.item_model.type
     overall_model_type = app.overall_model.type
 
     # thresholds
@@ -214,7 +215,8 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
     row = {
         "mode": mode,
         "skill_name": skill_name,
-        "model": overall_model_type,
+        "item_model": item_model_type,
+        "overall_model": overall_model_type,
         "selection_strategy": None,
         "RC_THRESHOLD": None,
         "RI_THRESHOLD": RI_THRESHOLD,
