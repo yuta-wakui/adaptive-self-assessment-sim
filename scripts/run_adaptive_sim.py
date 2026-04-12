@@ -24,7 +24,7 @@ from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold
 
 from adaptive_self_assessment.simulation.adaptive_ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.adaptive_ws2 import run_ws2_simulation
-from adaptive_self_assessment.simulation.common import load_app_config
+from adaptive_self_assessment.simulation.common import load_app_config, summarize_metrics
 
 
 def _parse_args() -> argparse.Namespace:
@@ -227,6 +227,14 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     if save_fold_results:
         all_fold_results.extend(fold_results)
 
+    # compute accuracy/f1 on aggregated predictions across all folds
+    logs_concat = pd.concat(all_logs, ignore_index=True) if all_logs else pd.DataFrame()
+    if mode == "ws1":
+        total_q = len(app.ws1_data.item_cols)
+    else:
+        total_q = len(app.ws2_data.current_item_cols)
+    global_metrics = summarize_metrics(logs_df=logs_concat, total_questions=total_q)
+
     # summarize results
     row = {
         "mode": mode,
@@ -243,11 +251,11 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
         "avg_complemented_questions": _calc_mean(df_fold, "avg_complemented_questions"),
         "avg_complement_accuracy": _calc_mean(df_fold, "avg_complement_accuracy"),
         "avg_reduction_rate": _calc_mean(df_fold, "reduction_rate"),
-        "accuracy_over_threshold": _calc_mean(df_fold, "accuracy_over_threshold"),
-        "f1_macro_over_threshold": _calc_mean(df_fold, "f1_macro_over_threshold"),
-        "coverage_over_threshold": _calc_mean(df_fold, "coverage_over_threshold"),
-        "accuracy_all": _calc_mean(df_fold, "accuracy_all"),
-        "f1_macro_all": _calc_mean(df_fold, "f1_macro_all"),
+        "accuracy_over_threshold": global_metrics["accuracy_over_threshold"],
+        "f1_macro_over_threshold": global_metrics["f1_macro_over_threshold"],
+        "coverage_over_threshold": global_metrics["coverage_over_threshold"],
+        "accuracy_all": global_metrics["accuracy_all"],
+        "f1_macro_all": global_metrics["f1_macro_all"],
         "avg_response_time": _calc_mean(df_fold, "avg_response_time"),
     }
 
