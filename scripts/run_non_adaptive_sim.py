@@ -258,7 +258,7 @@ def run_non_adaptive_simulations(config_path: str) -> Tuple[pd.DataFrame, Option
     row = {
         "mode": mode,
         "skill_name": skill_name,
-        "item_model": item_model_type,
+        "item_model": None,
         "overall_model": overall_model_type,
         "selection_strategy": None,
         "RC_THRESHOLD": None,

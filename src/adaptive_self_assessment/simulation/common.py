@@ -290,7 +290,6 @@ def complement_accuracy(complemented_items: Sequence[ComplementedItem]) -> Tuple
 # Metrics summarization
 # ----------------------------
 
-
 def summarize_prediction_metrics(
         logs_df: pd.DataFrame
 ) -> Dict[str, Any]:
