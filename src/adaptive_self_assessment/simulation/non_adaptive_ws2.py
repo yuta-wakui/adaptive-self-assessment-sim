@@ -20,7 +20,8 @@ from adaptive_self_assessment.components.predictor import predict_overall_ws2
 from adaptive_self_assessment.simulation.common import (
     load_app_config,
     validate_columns,
-    summarize_metrics,
+    summarize_prediction_metrics,
+    summarize_log_stats,
 )
 
 def run_non_adaptive_ws2_simulation(
@@ -137,7 +138,8 @@ def run_non_adaptive_ws2_simulation(
     logs_df = pd.DataFrame(logs)
 
     # summarize metrics
-    metrics = summarize_metrics(logs_df, total_questions=len(ca_cols))
+    pred_metrics = summarize_prediction_metrics(logs_df)
+    log_stats = summarize_log_stats(logs_df, total_questions=len(ca_cols))
 
     sim_results = {
         "skill": skill_name,
@@ -147,7 +149,8 @@ def run_non_adaptive_ws2_simulation(
         "num_train": len(train_df),
         "num_test": len(test_df),
         "selector_strategy": None,
-        **metrics,
+        **pred_metrics,
+        **log_stats,
     }
 
     return sim_results, logs_df

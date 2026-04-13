@@ -26,7 +26,8 @@ from adaptive_self_assessment.simulation.common import (
     load_app_config,
     validate_columns,
     complement_accuracy,
-    summarize_metrics,
+    summarize_prediction_metrics,
+    summarize_log_stats,
     ComplementedItem,
 )
 
@@ -190,17 +191,20 @@ def run_ws2_simulation(
     # convert logs to DataFrame
     logs_df = pd.DataFrame(logs)
 
-    metrics = summarize_metrics(logs_df=logs_df, total_questions=len(ca_cols))
+    # summarize metrics
+    pred_metrics = summarize_prediction_metrics(logs_df)
+    log_stats = summarize_log_stats(logs_df, total_questions=len(ca_cols))
 
     sim_results: Dict[str, Any] = {
         "skill": skill_name,
         "model_type": overall_model_type,
-        "RC_THRESHOLD": float(RC_THRESHOLD),
-        "RI_THRESHOLD": float(RI_THRESHOLD),
+        "RC_THRESHOLD": RC_THRESHOLD,
+        "RI_THRESHOLD": RI_THRESHOLD,
         "num_train": len(train_df),
         "num_test": len(test_df),
         "selector_strategy": selector_strategy.value,
-        **metrics,
+        **pred_metrics,
+        **log_stats,
     }
 
     # print(f"[DEBUG][WS2][fold={fold}] model cache size = {len(store.models)}")

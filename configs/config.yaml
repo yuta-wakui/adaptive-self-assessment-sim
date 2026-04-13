@@ -68,7 +68,7 @@ data:
 model:
   # Settings for models used to estimate item scores
   item_model:
-    type: "random_forest"  # Model type: "logistic_regression" or "random_forest"
+    type: "logistic_regression"  # Model type: "logistic_regression" or "random_forest"
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
       logistic_regression: # model type for param grid search of item score estimation
@@ -81,7 +81,7 @@ model:
 
   # Settings for models used to estimate overall scores
   overall_model:
-    type: "random_forest"  # Model type: "logistic_regression" or "random_forest"
+    type: "logistic_regression"  # Model type: "logistic_regression" or "random_forest"
     params: {}  # Model parameters (optional)
     param_grid:  # Grid search parameters (optional)
       logistic_regression: # model type for param grid search of overall score estimation
@@ -96,7 +96,7 @@ model:
 # Threshold settings
 # --------------------
 thresholds:
-  RC: 0.80  # Confidence threshold for item score estimation
+  RC: 0.90  # Confidence threshold for item score estimation
   RI: 0.70  # Confidence threshold for overall score estimation
   rc_grid: [0.60, 0.70, 0.80, 0.90]  # Grid search values for RC
   ri_grid: [0.50, 0.60, 0.70, 0.80]  # Grid search values for RI
@@ -105,7 +105,7 @@ thresholds:
 # Cross-validation settings
 # --------------------
 cv:
-  method: "kfold"  # Cross-validation method: "kfold" or "loo" (leave-one-out)
+  method: "loo"  # Cross-validation method: "kfold" or "loo" (leave-one-out)
   folds: 2  # Number of folds (used only when method is "kfold")
   stratified: true  # Whether to use stratified sampling (used only when method is "kfold")
   random_seed: 42  # Random seed

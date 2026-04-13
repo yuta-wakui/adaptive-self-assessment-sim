@@ -17,6 +17,7 @@ import os
 import pandas as pd
 import argparse
 import yaml
+import warnings
 
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Optional
@@ -24,7 +25,7 @@ from sklearn.model_selection import KFold, LeaveOneOut, StratifiedKFold
 
 from adaptive_self_assessment.simulation.adaptive_ws1 import run_ws1_simulation
 from adaptive_self_assessment.simulation.adaptive_ws2 import run_ws2_simulation
-from adaptive_self_assessment.simulation.common import load_app_config, summarize_metrics
+from adaptive_self_assessment.simulation.common import load_app_config, summarize_prediction_metrics, summarize_log_stats
 
 
 def _parse_args() -> argparse.Namespace:
@@ -227,13 +228,47 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     if save_fold_results:
         all_fold_results.extend(fold_results)
 
-    # compute accuracy/f1 on aggregated predictions across all folds
-    logs_concat = pd.concat(all_logs, ignore_index=True) if all_logs else pd.DataFrame()
-    if mode == "ws1":
-        total_q = len(app.ws1_data.item_cols)
+    # compute overall metrics
+    if cv_method == "loo":
+        # calculate metrics from all logs combined
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            logs_all = pd.concat(all_logs, ignore_index=True)
+        pred_logs = logs_all[["actual_ra", "predicted_ra", "is_confident"]].copy()
+
+        if mode == "ws1":
+            total_q = len(app.ws1_data.item_cols)
+        else:
+            total_q = len(app.ws2_data.current_item_cols)
+
+        pred_metrics = summarize_prediction_metrics(pred_logs)
+        log_stats = summarize_log_stats(logs_all, total_questions=total_q)
+
+        accuracy_over_threshold = pred_metrics.get("accuracy_over_threshold")
+        f1_macro_over_threshold = pred_metrics.get("f1_macro_over_threshold")
+        coverage_over_threshold = pred_metrics.get("coverage_over_threshold")
+        accuracy_all = pred_metrics.get("accuracy_all")
+        f1_macro_all = pred_metrics.get("f1_macro_all")
+
+        avg_answered_questions = log_stats.get("avg_answered_questions")
+        avg_complemented_questions = log_stats.get("avg_complemented_questions")
+        avg_complement_accuracy = log_stats.get("avg_complement_accuracy")
+        avg_reduction_rate = log_stats.get("reduction_rate")
+        avg_response_time = log_stats.get("avg_response_time")
+
     else:
-        total_q = len(app.ws2_data.current_item_cols)
-    global_metrics = summarize_metrics(logs_df=logs_concat, total_questions=total_q)
+        # calculate mean metrics across folds
+        total_q = _calc_mean(df_fold, "total_questions")
+        avg_answered_questions = _calc_mean(df_fold, "avg_answered_questions")
+        avg_complemented_questions = _calc_mean(df_fold, "avg_complemented_questions")
+        avg_complement_accuracy = _calc_mean(df_fold, "avg_complement_accuracy")
+        avg_reduction_rate = _calc_mean(df_fold, "reduction_rate")
+        accuracy_over_threshold = _calc_mean(df_fold, "accuracy_over_threshold")
+        f1_macro_over_threshold = _calc_mean(df_fold, "f1_macro_over_threshold")
+        coverage_over_threshold = _calc_mean(df_fold, "coverage_over_threshold")
+        accuracy_all = _calc_mean(df_fold, "accuracy_all")
+        f1_macro_all = _calc_mean(df_fold, "f1_macro_all")
+        avg_response_time = _calc_mean(df_fold, "avg_response_time")
 
     # summarize results
     row = {
@@ -246,17 +281,17 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
         "RI_THRESHOLD": RI_THRESHOLD,
         "cv_method": cv_method,
         "num_folds": n_splits,
-        "total_questions": _calc_mean(df_fold, "total_questions"),
-        "avg_answered_questions": _calc_mean(df_fold, "avg_answered_questions"),
-        "avg_complemented_questions": _calc_mean(df_fold, "avg_complemented_questions"),
-        "avg_complement_accuracy": _calc_mean(df_fold, "avg_complement_accuracy"),
-        "avg_reduction_rate": _calc_mean(df_fold, "reduction_rate"),
-        "accuracy_over_threshold": global_metrics["accuracy_over_threshold"],
-        "f1_macro_over_threshold": global_metrics["f1_macro_over_threshold"],
-        "coverage_over_threshold": global_metrics["coverage_over_threshold"],
-        "accuracy_all": global_metrics["accuracy_all"],
-        "f1_macro_all": global_metrics["f1_macro_all"],
-        "avg_response_time": _calc_mean(df_fold, "avg_response_time"),
+        "total_questions": total_q,
+        "avg_answered_questions": avg_answered_questions,
+        "avg_complemented_questions": avg_complemented_questions,
+        "avg_complement_accuracy": avg_complement_accuracy,
+        "avg_reduction_rate": avg_reduction_rate,
+        "accuracy_over_threshold": accuracy_over_threshold,
+        "f1_macro_over_threshold": f1_macro_over_threshold,
+        "coverage_over_threshold": coverage_over_threshold,
+        "accuracy_all": accuracy_all,
+        "f1_macro_all": f1_macro_all,
+        "avg_response_time": avg_response_time,
     }
 
     results_df = pd.DataFrame([row])
@@ -295,7 +330,9 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     # save user logs
     logs_all_df: Optional[pd.DataFrame] = None
     if save_logs and all_logs:
-        logs_all_df = pd.concat(all_logs, ignore_index=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            logs_all_df = pd.concat(all_logs, ignore_index=True)
 
         log_subdir = os.path.join(base_log_dir, mode)
         if timestamped:
