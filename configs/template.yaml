@@ -46,12 +46,12 @@ data:
 model:
   # 未回答項目推定モデル設定
   item_model:
-    type: "logistic_regression" # 現在は"logistic_regression"のみ対応
+    type: "logistic_regression" # 現在は"logistic_regression"または"random_forest"に対応
     params: {} # モデルパラメータ（任意）
 
   # 総合評価推定モデル設定
   overall_model:
-    type: "logistic_regression" # 現在は"logistic_regression"のみ対応
+    type: "logistic_regression" # 現在は"logistic_regression"または"random_forest"に対応
     params: {} # モデルパラメータ（任意）
 
 # --------------------
@@ -65,8 +65,9 @@ thresholds:
 # クロスバリデーション設定
 # --------------------
 cv:
-  folds: 5 # 分割数
-  stratified: true # 層化サンプリングの有無
+  method: "kfold" # クロスバリデーションの方法："kfold"または"loo"(Leave-One-Out)
+  folds: 5 # 分割数（kfoldの場合）
+  stratified: true # 層化サンプリングの有無（kfoldの場合）
   random_seed: 42 # 乱数シード
 
 # --------------------
