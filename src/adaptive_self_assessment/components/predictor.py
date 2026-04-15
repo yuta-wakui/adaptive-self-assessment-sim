@@ -486,7 +486,8 @@ def predict_item_ws1(
 
         except Exception as e:
             logger.exception(f"[predict_item_ws1 error] target={item}: {e}")
-            preds[item] = df_train[item].mode(dropna=True).iloc[0]
+            mode_series = df_train[item].mode(dropna=True)
+            preds[item] = int(mode_series.iloc[0]) if not mode_series.empty else 0
             confidences[item] = 0.0
 
     return preds, confidences
@@ -630,7 +631,8 @@ def predict_item_ws2(
 
         except Exception as e:
             logger.exception(f"[predict_item_ws2 error] target={item}: {e}")
-            preds[item] = df_train[item].mode(dropna=True).iloc[0]
+            mode_series = df_train[item].mode(dropna=True)
+            preds[item] = int(mode_series.iloc[0]) if not mode_series.empty else 0
             confidences[item] = 0.0
         
     return preds, confidences

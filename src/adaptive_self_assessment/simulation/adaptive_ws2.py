@@ -32,9 +32,9 @@ from adaptive_self_assessment.simulation.common import (
 )
 
 def run_ws2_simulation(
-        train_df: pd.DataFrame = None,
-        test_df: pd.DataFrame = None, 
-        cfg: Dict[str, Any] = None,
+        train_df: pd.DataFrame,
+        test_df: pd.DataFrame, 
+        cfg: Dict[str, Any],
         fold: int = 0
     ) -> Tuple[Dict[str, Any], pd.DataFrame]:
     """
@@ -163,14 +163,14 @@ def run_ws2_simulation(
         # record user log
         user_log = {
             "user_id": user_id,
-            "skill" : skill_name,
+            "skill" :skill_name,
             "total_questions": len(ca_cols),
             "num_answered_questions": len(answered_items),
             "num_complemented_questions": len(complemented_items),
             "predicted_ra": int(Ra_pred),
             "actual_ra": actual_Ra,
             "confidence": float(Ra_conf),
-            "is_confident": is_confident,
+            "is_confident": bool(is_confident),
             "correct": int(int(Ra_pred) == int(actual_Ra)),
             "complement_accuracy": comp_acc,
             "answered_items": answered_items,

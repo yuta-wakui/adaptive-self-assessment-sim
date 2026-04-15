@@ -162,7 +162,7 @@ def run_ws1_simulation(
             "predicted_ra": int(Ra_pred),
             "actual_ra": actual_Ra,
             "confidence": float(Ra_conf),
-            "is_confident": is_confident,
+            "is_confident": bool(is_confident),
             "correct": int(int(Ra_pred) == int(actual_Ra)),
             "complement_accuracy": comp_acc,
             "answered_items": answered_items,

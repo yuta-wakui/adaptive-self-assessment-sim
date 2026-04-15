@@ -266,15 +266,13 @@ def compare_thresholds(
 
         if save_user_logs and save_logs and all_logs:
             logs_all_df = pd.concat(all_logs, ignore_index=True)
-            rc_str = str(RC).replace(".", "p")
-            ri_str = str(RI).replace(".", "p")
 
             log_subdir = os.path.join(base_log_dir, mode, "user_logs_thresholds")
             if timestamped:
                 log_subdir = os.path.join(log_subdir, run_id)
             os.makedirs(log_subdir, exist_ok=True)
 
-            log_name = f"{mode}_user_logs_rc{rc_str}_ri{ri_str}.csv"
+            log_name = f"{mode}_user_logs_cmp_thresholds.csv"
             logs_all_df.to_csv(os.path.join(log_subdir, log_name), index=False)
             print(f"Saved user logs: {os.path.join(log_subdir, log_name)}")
 

@@ -117,7 +117,7 @@ def run_non_adaptive_ws2_simulation(
             "correct": int(int(R_pred) == int(actual_Ra)),
             "total_questions": len(ca_cols),
             "num_answered_questions": len(ca_cols), # all items are answered in non-adaptive
-            "num_complemented_questions": 0, # all items are not completed in non-adaptive
+            "num_complemented_questions": 0, # all items are not complemented in non-adaptive
             "complement_accuracy": None, # not applicable for non-adaptive
             "answered_items": list(sorted(Ca.keys())),
             "complemented_items": [], # no complemented items in non-adaptive
