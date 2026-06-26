@@ -81,7 +81,7 @@ def run_non_adaptive_ws2_simulation(
 
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
-        user_id = int(user[id_col]) # get user ID
+        user_id = user[id_col] # get user ID
 
         # user' item responses (use all actual items for non-adaptive)
         Pra = int(user[pra_col]) # past overall score

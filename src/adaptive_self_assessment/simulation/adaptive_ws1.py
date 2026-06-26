@@ -88,7 +88,7 @@ def run_ws1_simulation(
 
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
-        user_id = int(user[id_col]) # get user ID
+        user_id = user[id_col] # get user ID
 
         C: List[str] = ca_cols.copy() # unanswered items
         Ca: Dict[str, int] = {} # answered or complemented items
@@ -97,7 +97,7 @@ def run_ws1_simulation(
         complemented_items: List[ComplementedItem] = [] # complemented items: (item, predicted_value, confidence, actual_value)
 
         # per-user selector seed (reproducible)
-        seed = int(make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id))
+        seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)
         
         # selector instance holds RNG state
         selector = QuestionSelector(strategy=selector_strategy, seed=seed)
