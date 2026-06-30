@@ -216,17 +216,17 @@ def load_selector_config(cfg: Dict[str, Any]) -> SelectionConfig:
     
     s = str(raw).strip().lower()
 
-    # try lowercase
+    # value ("random", "fixed_correlation", ...)
     try:
         return SelectionConfig(strategy=SelectionStrategy(s))
     except ValueError:
         pass
 
-    # try uppercase
+    # enum name ("RANDOM", "FIXED_CORRELATION", ...)
     try:
         return SelectionConfig(strategy=SelectionStrategy[s.upper()])
     except KeyError:
-        return SelectionConfig(strategy=SelectionStrategy.RANDOM)
+        raise ValueError(f"Unknown question selection strategy: {raw}")
 
 def load_app_config(cfg: Dict[str, Any]) -> AppConfig:
     return AppConfig(

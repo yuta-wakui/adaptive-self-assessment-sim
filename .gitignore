@@ -40,6 +40,9 @@ outputs/
 # Reports:
 reports
 
+# Docs:
+docs/
+
 # README:
 README-en.md
 README-ja.md

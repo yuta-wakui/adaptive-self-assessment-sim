@@ -74,7 +74,7 @@ cv:
 # 質問項目の選択方法
 # --------------------
 question_selection:
-  strategy: "random" # 選択戦略（現在は"random"のみ対応）
+  strategy: "random" # 選択戦略: "random" / "fixed_correlation" / "fixed_partial_regression" / "fixed_feature_importance"
 
 # --------------------
 # 出力設定

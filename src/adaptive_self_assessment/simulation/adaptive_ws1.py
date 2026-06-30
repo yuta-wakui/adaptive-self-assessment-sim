@@ -18,7 +18,7 @@ import time
 from typing import List, Dict, Any, Tuple
 
 from adaptive_self_assessment.components.rng import make_selector_seed
-from adaptive_self_assessment.components.selector import QuestionSelector
+from adaptive_self_assessment.components.selector import QuestionSelector, compute_importance_order, FIXED_STRATEGIES
 from adaptive_self_assessment.components.model_store import ModelStore
 from adaptive_self_assessment.components.predictor import predict_item_ws1, predict_overall_ws1
 
@@ -86,6 +86,17 @@ def run_ws1_simulation(
     cv_seed = int(app.cv.random_seed)
     selector_strategy = app.selector.strategy
 
+    # compute fixed importance order once from training data (per fold)
+    importance_order = None
+    if selector_strategy in FIXED_STRATEGIES:
+        importance_order = compute_importance_order(
+            df_train=train_df,
+            item_cols=ca_cols,
+            target_col=ra_col,
+            strategy=selector_strategy,
+            random_state=42,
+        )
+
     # run simulation for each user in test set
     for _, user in test_df.iterrows():
         user_id = user[id_col] # get user ID
@@ -98,9 +109,9 @@ def run_ws1_simulation(
 
         # per-user selector seed (reproducible)
         seed = make_selector_seed(cv_seed=cv_seed, fold=fold, user_id=user_id)
-        
+
         # selector instance holds RNG state
-        selector = QuestionSelector(strategy=selector_strategy, seed=seed)
+        selector = QuestionSelector(strategy=selector_strategy, seed=seed, importance_order=importance_order)
 
         start_time = time.time()  
 
