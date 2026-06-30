@@ -48,7 +48,7 @@ Saved user logs to: outputs/logs/ws2/20260219_194536/ws2_user_logs_rc0p8_ri0p7_s
 ## 特徴
 - 機械学習による適応型自己評価アルゴリズムのシミュレーション環境
 - 単回評価（WS1）と継続評価（WS2；過去＋現在）に対応
-- 回答パターンに応じた質問選択戦略に対応（現在はランダム選択のみ実装）
+- 回答パターンに応じた質問選択戦略に対応（ランダム選択・固定重要度順選択）
 - 未回答項目を信頼度に基づいて逐次補完
 - Cross-validationによる再現性のある性能評価
 - YAML設定のみで実験条件・モデル・閾値を変更可能
@@ -175,7 +175,7 @@ f1_macro_all: 0.5003
 |                       | `folds`               | int          | 分割数（`method: "kfold"` のときのみ有効）            |
 |                       | `stratified`          | bool         | 層化分割を行うか（`method: "kfold"` のときのみ有効）       |
 |                       | `random_seed`         | int          | 乱数シード                                    |
-| `question_selection`  | `strategy`            | string       | 質問選択戦略（現在は `"random"` のみ）                |
+| `question_selection`  | `strategy`            | string       | 質問選択戦略（`"random"` / `"fixed_correlation"` / `"fixed_partial_regression"` / `"fixed_feature_importance"`） |
 | `results`             | `save_csv`            | bool         | 結果CSVを保存するか                              |
 |                       | `output_dir`          | string       | 出力先ディレクトリ                                |
 |                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
