@@ -20,10 +20,11 @@ python scripts/run_adaptive_sim.py --config configs/config.yaml
 === WS2 Simulation Started ===
 input: data/sample/ws2/ws2_data_sample.csv
 skill: sample
+model(item): logistic_regression
 model(overall): logistic_regression
 question_selection.strategy: random
-thresholds: RC=0.8, RI=0.7
-cv: folds=2, stratified=True, seed=42
+thresholds: RC=0.9, RI=0.7
+cv: method=kfold, folds=2, stratified=True, seed=42
 Dropped ignore_items columns: ['past_reflection_length', 'current_reflection_length']
 
 ==== WS2: sample ====
@@ -33,14 +34,14 @@ n_rows: 100, n_cols: 33
 ---- Fold 2/2 ----
 
 === WS2 Simulation Results ===
-average_answered_questions: 3.88 / 10
-reduction_rate: 61.2%
-accuracy_all: 0.6400
-f1_macro_all: 0.4566
+average_answered_questions: 6.91 / 15
+reduction_rate: 53.9%
+accuracy_all: 0.6800
+f1_macro_all: 0.4933
 
-Saved results to: outputs/results/ws2/sim_results/20260219_194536/ws2_results_rc0p8_ri0p7_sample.csv
-Saved fold results to: outputs/results/ws2/sim_results/20260219_194536/ws2_fold_results_rc0p8_ri0p7_sample.csv
-Saved user logs to: outputs/logs/ws2/20260219_194536/ws2_user_logs_rc0p8_ri0p7_sample.csv
+Saved results to: outputs/results/ws2/sim_results/20260916_191804/ws2_results_rc0p9_ri0p7_sample.csv
+Saved fold results to: outputs/results/ws2/sim_results/20260916_191804/ws2_fold_results_rc0p9_ri0p7_sample.csv
+Saved user logs to: outputs/logs/ws2/20260916_191804/ws2_user_logs_rc0p9_ri0p7_sample.csv
 
 === WS2 Simulation Completed ===
 ```
@@ -48,7 +49,7 @@ Saved user logs to: outputs/logs/ws2/20260219_194536/ws2_user_logs_rc0p8_ri0p7_s
 ## 特徴
 - 機械学習による適応型自己評価アルゴリズムのシミュレーション環境
 - 単回評価（WS1）と継続評価（WS2；過去＋現在）に対応
-- 回答パターンに応じた質問選択戦略に対応（ランダム選択・固定重要度順選択）
+- 回答パターンに応じた質問選択戦略に対応（ランダム選択・Max-Relevance・mRMR）
 - 未回答項目を信頼度に基づいて逐次補完
 - Cross-validationによる再現性のある性能評価
 - YAML設定のみで実験条件・モデル・閾値を変更可能
@@ -109,10 +110,10 @@ python scripts/run_adaptive_sim.py --config configs/config.yaml
 出力例：
 ```text
 === WS2 Simulation Results ===
-average_answered_questions: 3.88 / 10
-reduction_rate: 61%
-accuracy_all: 0.6400
-f1_macro_all: 0.4566
+average_answered_questions: 6.91 / 15
+reduction_rate: 53.9%
+accuracy_all: 0.6800
+f1_macro_all: 0.4933
 ```
 
 また、結果ファイルは以下に保存されます：
@@ -132,8 +133,8 @@ python scripts/run_non_adaptive_sim.py --config configs/config.yaml
 ```text
 === WS2 Non-Adaptive Results ===
 Use all questions:
-accuracy_all: 0.6800
-f1_macro_all: 0.5003
+accuracy_all: 0.7100
+f1_macro_all: 0.5165
 ```
 
 ## シミュレーション設定

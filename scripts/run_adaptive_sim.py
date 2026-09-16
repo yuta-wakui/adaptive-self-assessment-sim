@@ -167,7 +167,8 @@ def run_simulations(config_path: str) -> Tuple[pd.DataFrame, Optional[pd.DataFra
     print(f"\n=== {mode.upper()} Simulation Started ===")
     print(f"input: {input_path}")
     print(f"skill: {skill_name}")
-    print(f"model(overall): {overall_model_type}")
+    print(f"model(item): {item_model_type}")
+    print(f"model(overall): {overall_model_type}") 
     print(f"question_selection.strategy: {selector_strategy.value}")
     print(f"thresholds: RC={RC_THRESHOLD}, RI={RI_THRESHOLD}")
     if cv_method == "loo":

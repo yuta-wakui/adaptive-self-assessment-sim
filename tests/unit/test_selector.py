@@ -37,17 +37,20 @@ def importance_order(items):
 
 @pytest.fixture
 def df_train_corr():
-    """Training data where item-1 correlates perfectly with target, others weakly."""
+    """Training data where item-1 has highest cross-item predictability.
+
+    item-1 is the underlying signal; items 2-3 are noisy copies (high cross-item corr);
+    items 4-5 are random (low cross-item corr).
+    """
     rng = np.random.default_rng(0)
-    n = 50
-    target = rng.integers(0, 5, size=n)
+    n = 200
+    signal = rng.integers(0, 3, size=n)
     data = {
-        "item-1": target,                             # perfect correlation
-        "item-2": rng.integers(0, 3, size=n),         # weak
-        "item-3": rng.integers(0, 3, size=n),         # weak
-        "item-4": rng.integers(0, 3, size=n),         # weak
-        "item-5": rng.integers(0, 3, size=n),         # weak
-        "target": target,
+        "item-1": signal,
+        "item-2": np.clip(signal + rng.integers(-1, 2, size=n), 0, 2),
+        "item-3": np.clip(signal + rng.integers(-1, 2, size=n), 0, 2),
+        "item-4": rng.integers(0, 3, size=n),
+        "item-5": rng.integers(0, 3, size=n),
     }
     return pd.DataFrame(data)
 
@@ -173,14 +176,15 @@ def test_fixed_strategy_raises_when_no_match(strategy, importance_order):
 # ---------------------------------------------------------------------------
 
 def test_compute_importance_order_correlation_top_item(df_train_corr):
+    """item-1 (signal) should rank at or near the top by cross-item correlation."""
     item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
     order = compute_importance_order(
         df_train=df_train_corr,
         item_cols=item_cols,
-        target_col="target",
         strategy=SelectionStrategy.FIXED_CORRELATION,
     )
-    assert order[0] == "item-1"
+    # item-1 (signal) and items 2-3 (noisy copies) should outrank random items 4-5
+    assert order[0] in {"item-1", "item-2", "item-3"}
     assert set(order) == set(item_cols)
 
 
@@ -189,7 +193,6 @@ def test_compute_importance_order_correlation_returns_all_items(df_train_corr):
     order = compute_importance_order(
         df_train=df_train_corr,
         item_cols=item_cols,
-        target_col="target",
         strategy=SelectionStrategy.FIXED_CORRELATION,
     )
     assert len(order) == len(item_cols)
@@ -200,7 +203,6 @@ def test_compute_importance_order_partial_regression_returns_all_items(df_train_
     order = compute_importance_order(
         df_train=df_train_corr,
         item_cols=item_cols,
-        target_col="target",
         strategy=SelectionStrategy.FIXED_PARTIAL_REGRESSION,
         random_state=42,
     )
@@ -213,7 +215,6 @@ def test_compute_importance_order_feature_importance_returns_all_items(df_train_
     order = compute_importance_order(
         df_train=df_train_corr,
         item_cols=item_cols,
-        target_col="target",
         strategy=SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
         random_state=42,
     )
@@ -226,7 +227,6 @@ def test_compute_importance_order_reproducible(df_train_corr):
     kwargs = dict(
         df_train=df_train_corr,
         item_cols=item_cols,
-        target_col="target",
         strategy=SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
         random_state=42,
     )
@@ -238,10 +238,19 @@ def test_compute_importance_order_raises_for_random():
         compute_importance_order(
             df_train=pd.DataFrame(),
             item_cols=[],
-            target_col="target",
             strategy=SelectionStrategy.RANDOM,
         )
 
+
+def test_compute_importance_order_raises_when_less_than_two_items():
+    df = pd.DataFrame({"item-1": [0, 1, 2]})
+
+    with pytest.raises(ValueError, match="At least two item columns"):
+        compute_importance_order(
+            df_train=df,
+            item_cols=["item-1"],
+            strategy=SelectionStrategy.FIXED_CORRELATION,
+        )
 
 # ---------------------------------------------------------------------------
 # FIXED_STRATEGIES set
