@@ -36,27 +36,39 @@ def importance_order(items):
     return items.copy()  # item-1 is most important
 
 @pytest.fixture
-def df_train_corr():
-    """Training data where item-1 has highest cross-item predictability.
+def item_cols():
+    return ["item-1", "item-2", "item-3", "item-4", "item-5"]
 
-    item-1 is the underlying signal; items 2-3 are noisy copies (high cross-item corr);
-    items 4-5 are random (low cross-item corr).
+@pytest.fixture
+def df_train_mi():
+    """Training data with a known mutual information structure.
+
+    The target is built from two independent factors, target = strong + weak:
+    item-1 and item-2 are both copies of `strong`, so they carry the highest
+    relevance I(Q; Y) = 0.64 nats but are fully redundant with each other.
+    item-3 is `weak`: lower relevance (0.23 nats), yet independent of item-1.
+    item-4 and item-5 are independent noise: near-zero relevance.
+
+    MaxRev should therefore rank item-2 second, while mRMR should push it below
+    item-3 because of the redundancy penalty.
     """
     rng = np.random.default_rng(0)
-    n = 200
-    signal = rng.integers(0, 3, size=n)
+    n = 300
+    strong = rng.integers(0, 3, size=n)
+    weak = rng.integers(0, 2, size=n)
     data = {
-        "item-1": signal,
-        "item-2": np.clip(signal + rng.integers(-1, 2, size=n), 0, 2),
-        "item-3": np.clip(signal + rng.integers(-1, 2, size=n), 0, 2),
+        "item-1": strong,
+        "item-2": strong,              # identical to item-1
+        "item-3": weak,
         "item-4": rng.integers(0, 3, size=n),
         "item-5": rng.integers(0, 3, size=n),
+        "target": strong + weak,
     }
     return pd.DataFrame(data)
 
 
 # ---------------------------------------------------------------------------
-# RANDOM strategy (existing)
+# RANDOM strategy
 # ---------------------------------------------------------------------------
 
 def test_select_question_reproducible():
@@ -100,24 +112,16 @@ def test_unknown_strategy_raises_not_implemented():
 
 
 # ---------------------------------------------------------------------------
-# Fixed strategies: QuestionSelector
+# Fixed-order strategies: QuestionSelector
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("strategy", [
-    SelectionStrategy.FIXED_CORRELATION,
-    SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-    SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-])
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
 def test_fixed_strategy_requires_importance_order(strategy):
     with pytest.raises(ValueError, match="importance_order"):
         QuestionSelector(strategy=strategy, seed=0)
 
 
-@pytest.mark.parametrize("strategy", [
-    SelectionStrategy.FIXED_CORRELATION,
-    SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-    SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-])
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
 def test_fixed_strategy_selects_highest_ranked_available(strategy, items, importance_order):
     selector = QuestionSelector(strategy=strategy, seed=0, importance_order=importance_order)
 
@@ -125,11 +129,7 @@ def test_fixed_strategy_selects_highest_ranked_available(strategy, items, import
     assert selector.select(items) == "item-1"
 
 
-@pytest.mark.parametrize("strategy", [
-    SelectionStrategy.FIXED_CORRELATION,
-    SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-    SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-])
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
 def test_fixed_strategy_skips_removed_items(strategy, items, importance_order):
     selector = QuestionSelector(strategy=strategy, seed=0, importance_order=importance_order)
 
@@ -139,11 +139,7 @@ def test_fixed_strategy_skips_removed_items(strategy, items, importance_order):
     assert selector.select(remaining) == "item-2"
 
 
-@pytest.mark.parametrize("strategy", [
-    SelectionStrategy.FIXED_CORRELATION,
-    SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-    SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-])
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
 def test_fixed_strategy_exhausts_in_order(strategy, items, importance_order):
     selector = QuestionSelector(strategy=strategy, seed=0, importance_order=importance_order)
 
@@ -158,11 +154,7 @@ def test_fixed_strategy_exhausts_in_order(strategy, items, importance_order):
     assert selected == importance_order
 
 
-@pytest.mark.parametrize("strategy", [
-    SelectionStrategy.FIXED_CORRELATION,
-    SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-    SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-])
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
 def test_fixed_strategy_raises_when_no_match(strategy, importance_order):
     selector = QuestionSelector(strategy=strategy, seed=0, importance_order=importance_order)
 
@@ -172,63 +164,103 @@ def test_fixed_strategy_raises_when_no_match(strategy, importance_order):
 
 
 # ---------------------------------------------------------------------------
-# compute_importance_order
+# compute_importance_order: MaxRev
 # ---------------------------------------------------------------------------
 
-def test_compute_importance_order_correlation_top_item(df_train_corr):
-    """item-1 (signal) should rank at or near the top by cross-item correlation."""
-    item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
+def test_maxrev_ranks_by_relevance(df_train_mi, item_cols):
+    """Items informative about the target outrank independent noise items."""
     order = compute_importance_order(
-        df_train=df_train_corr,
+        df_train=df_train_mi,
         item_cols=item_cols,
-        strategy=SelectionStrategy.FIXED_CORRELATION,
+        target_col="target",
+        strategy=SelectionStrategy.MaxRev,
     )
-    # item-1 (signal) and items 2-3 (noisy copies) should outrank random items 4-5
-    assert order[0] in {"item-1", "item-2", "item-3"}
-    assert set(order) == set(item_cols)
+    assert order[:3] == ["item-1", "item-2", "item-3"]
+    assert set(order[3:]) == {"item-4", "item-5"}
 
 
-def test_compute_importance_order_correlation_returns_all_items(df_train_corr):
-    item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
+def test_maxrev_keeps_redundant_item_near_top(df_train_mi, item_cols):
+    """MaxRev ignores redundancy, so the duplicated item-2 stays at rank 2."""
     order = compute_importance_order(
-        df_train=df_train_corr,
+        df_train=df_train_mi,
         item_cols=item_cols,
-        strategy=SelectionStrategy.FIXED_CORRELATION,
+        target_col="target",
+        strategy=SelectionStrategy.MaxRev,
     )
-    assert len(order) == len(item_cols)
+    assert order[1] == "item-2"
 
 
-def test_compute_importance_order_partial_regression_returns_all_items(df_train_corr):
-    item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
+def test_maxrev_returns_all_items(df_train_mi, item_cols):
     order = compute_importance_order(
-        df_train=df_train_corr,
+        df_train=df_train_mi,
         item_cols=item_cols,
-        strategy=SelectionStrategy.FIXED_PARTIAL_REGRESSION,
-        random_state=42,
-    )
-    assert len(order) == len(item_cols)
-    assert set(order) == set(item_cols)
-
-
-def test_compute_importance_order_feature_importance_returns_all_items(df_train_corr):
-    item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
-    order = compute_importance_order(
-        df_train=df_train_corr,
-        item_cols=item_cols,
-        strategy=SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-        random_state=42,
+        target_col="target",
+        strategy=SelectionStrategy.MaxRev,
     )
     assert len(order) == len(item_cols)
     assert set(order) == set(item_cols)
 
 
-def test_compute_importance_order_reproducible(df_train_corr):
-    item_cols = ["item-1", "item-2", "item-3", "item-4", "item-5"]
+# ---------------------------------------------------------------------------
+# compute_importance_order: mRMR
+# ---------------------------------------------------------------------------
+
+def test_mrmr_first_item_is_most_relevant(df_train_mi, item_cols):
+    """With S empty, the first pick falls back to the Max-Relevance criterion."""
+    order = compute_importance_order(
+        df_train=df_train_mi,
+        item_cols=item_cols,
+        target_col="target",
+        strategy=SelectionStrategy.MRMR,
+    )
+    assert order[0] == "item-1"
+
+
+def test_mrmr_demotes_redundant_item(df_train_mi, item_cols):
+    """item-2 duplicates item-1, so mRMR prefers the less redundant item-3."""
+    order = compute_importance_order(
+        df_train=df_train_mi,
+        item_cols=item_cols,
+        target_col="target",
+        strategy=SelectionStrategy.MRMR,
+    )
+    assert order[1] == "item-3"
+    assert order.index("item-2") > order.index("item-3")
+
+
+def test_mrmr_differs_from_maxrev(df_train_mi, item_cols):
+    """The redundancy term must actually change the resulting order."""
+    kwargs = dict(df_train=df_train_mi, item_cols=item_cols, target_col="target")
+
+    maxrev = compute_importance_order(strategy=SelectionStrategy.MaxRev, **kwargs)
+    mrmr = compute_importance_order(strategy=SelectionStrategy.MRMR, **kwargs)
+
+    assert maxrev != mrmr
+    assert set(maxrev) == set(mrmr)
+
+
+def test_mrmr_returns_all_items(df_train_mi, item_cols):
+    order = compute_importance_order(
+        df_train=df_train_mi,
+        item_cols=item_cols,
+        target_col="target",
+        strategy=SelectionStrategy.MRMR,
+    )
+    assert len(order) == len(item_cols)
+    assert set(order) == set(item_cols)
+
+
+# ---------------------------------------------------------------------------
+# compute_importance_order: common behaviour
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
+def test_compute_importance_order_reproducible(df_train_mi, item_cols, strategy):
     kwargs = dict(
-        df_train=df_train_corr,
+        df_train=df_train_mi,
         item_cols=item_cols,
-        strategy=SelectionStrategy.FIXED_FEATURE_IMPORTANCE,
-        random_state=42,
+        target_col="target",
+        strategy=strategy,
     )
     assert compute_importance_order(**kwargs) == compute_importance_order(**kwargs)
 
@@ -238,26 +270,40 @@ def test_compute_importance_order_raises_for_random():
         compute_importance_order(
             df_train=pd.DataFrame(),
             item_cols=[],
+            target_col="target",
             strategy=SelectionStrategy.RANDOM,
         )
 
 
-def test_compute_importance_order_raises_when_less_than_two_items():
-    df = pd.DataFrame({"item-1": [0, 1, 2]})
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
+def test_compute_importance_order_raises_when_less_than_two_items(strategy):
+    df = pd.DataFrame({"item-1": [0, 1, 2], "target": [0, 1, 2]})
 
     with pytest.raises(ValueError, match="At least two item columns"):
         compute_importance_order(
             df_train=df,
             item_cols=["item-1"],
-            strategy=SelectionStrategy.FIXED_CORRELATION,
+            target_col="target",
+            strategy=strategy,
         )
+
+
+@pytest.mark.parametrize("strategy", sorted(FIXED_STRATEGIES, key=lambda s: s.value))
+def test_compute_importance_order_raises_for_missing_target(df_train_mi, item_cols, strategy):
+    with pytest.raises(ValueError, match="not found in df_train"):
+        compute_importance_order(
+            df_train=df_train_mi,
+            item_cols=item_cols,
+            target_col="missing-col",
+            strategy=strategy,
+        )
+
 
 # ---------------------------------------------------------------------------
 # FIXED_STRATEGIES set
 # ---------------------------------------------------------------------------
 
 def test_fixed_strategies_set_contents():
-    assert SelectionStrategy.FIXED_CORRELATION in FIXED_STRATEGIES
-    assert SelectionStrategy.FIXED_PARTIAL_REGRESSION in FIXED_STRATEGIES
-    assert SelectionStrategy.FIXED_FEATURE_IMPORTANCE in FIXED_STRATEGIES
+    assert SelectionStrategy.MaxRev in FIXED_STRATEGIES
+    assert SelectionStrategy.MRMR in FIXED_STRATEGIES
     assert SelectionStrategy.RANDOM not in FIXED_STRATEGIES

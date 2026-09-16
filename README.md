@@ -176,7 +176,7 @@ f1_macro_all: 0.5165
 |                       | `folds`               | int          | 分割数（`method: "kfold"` のときのみ有効）            |
 |                       | `stratified`          | bool         | 層化分割を行うか（`method: "kfold"` のときのみ有効）       |
 |                       | `random_seed`         | int          | 乱数シード                                    |
-| `question_selection`  | `strategy`            | string       | 質問選択戦略（`"random"` / `"fixed_correlation"` / `"fixed_partial_regression"` / `"fixed_feature_importance"`） |
+| `question_selection`  | `strategy`            | string       | 質問選択戦略（`"random"` / `"MaxRev"` / `"mrmr"`） |
 | `results`             | `save_csv`            | bool         | 結果CSVを保存するか                              |
 |                       | `output_dir`          | string       | 出力先ディレクトリ                                |
 |                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
