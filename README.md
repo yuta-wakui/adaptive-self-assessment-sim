@@ -176,7 +176,7 @@ f1_macro_all: 0.5165
 |                       | `folds`               | int          | 分割数（`method: "kfold"` のときのみ有効）            |
 |                       | `stratified`          | bool         | 層化分割を行うか（`method: "kfold"` のときのみ有効）       |
 |                       | `random_seed`         | int          | 乱数シード                                    |
-| `question_selection`  | `strategy`            | string       | 質問選択戦略（`"random"` / `"MaxRev"` / `"mrmr"`） |
+| `question_selection`  | `strategy`            | string       | 質問選択戦略（[質問選択戦略](#質問選択戦略)の6種から指定） |
 | `results`             | `save_csv`            | bool         | 結果CSVを保存するか                              |
 |                       | `output_dir`          | string       | 出力先ディレクトリ                                |
 |                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
@@ -185,6 +185,49 @@ f1_macro_all: 0.5165
 | `logging`             | `save_logs`           | bool         | 個別ログを保存するか                               |
 |                       | `log_dir`             | string       | ログ保存先ディレクトリ                              |
 |                       | `timestamped`         | bool         | タイムスタンプ付きフォルダを作成するか                      |
+
+## 質問選択戦略
+`question_selection.strategy` には以下を指定できます。いずれも相互情報量 $I(\cdot;\cdot)$ をfoldの訓練データのみから推定するため、テスト対象回答者の回答値・正解ルーブリックは質問選択に使用されません。
+
+$F$ は全チェック項目、$A$ は回答済み（信頼度閾値以上で補完された項目を含む）、$U=F\setminus A$ は未回答項目、$Y$ はルーブリックによる総合評価、$S$ は `rubric_based_mrmr` が順位構築中に既に選択した項目集合を表します。
+
+| `strategy` | 手法 | スコア | 選択の適応性 |
+| --- | --- | --- | --- |
+| `random` | Random | ― | 未回答項目から一様ランダム |
+| `rubric_based_maxrev` | Max-Relevance | $I(Q_i;Y)$ | fold内で固定順序 |
+| `rubric_based_mrmr` | Rubric-based mRMR | $I(Q_i;Y)-\frac{1}{\vert S\vert}\sum_{Q_j\in S}I(Q_i;Q_j)$ | fold内で固定順序 |
+| `inter_item_relevance_all` | Inter-Item Relevance (All) | $\frac{1}{\vert F\vert-1}\sum_{Q_j\in F\setminus\{Q_i\}}I(Q_i;Q_j)$ | fold内で固定順序 |
+| `inter_item_relevance_unanswered` | Inter-Item Relevance (Unanswered) | $\frac{1}{\vert U\vert-1}\sum_{Q_j\in U\setminus\{Q_i\}}I(Q_i;Q_j)$ | 未回答集合 $U$ に適応 |
+| `inter_item_mrmr_unanswered` | Inter-Item mRMR (Unanswered) | 上式 $-\frac{1}{\vert A\vert}\sum_{Q_j\in A}I(Q_i;Q_j)$ | 集合 $A,U$ に適応 |
+
+定義式・境界条件・各戦略の意図は [docs/adaptive_self_assessment_overview.md](docs/adaptive_self_assessment_overview.md#質問選択戦略) を参照してください。
+
+### 戦略を変えて比較する
+`strategy` 以外の設定（CV分割、モデル、閾値、乱数シード）を揃えたまま、戦略ごとに実行します。
+
+```bash
+mkdir -p outputs/configs
+
+for s in random rubric_based_maxrev rubric_based_mrmr \
+         inter_item_relevance_all \
+         inter_item_relevance_unanswered \
+         inter_item_mrmr_unanswered; do
+  python - "$s" <<'PY'
+import sys, yaml
+strategy = sys.argv[1]
+cfg = yaml.safe_load(open("configs/config.yaml", encoding="utf-8"))
+cfg["question_selection"]["strategy"] = strategy
+cfg["results"]["filename_suffix"] = strategy
+with open(f"outputs/configs/{strategy}.yaml", "w", encoding="utf-8") as f:
+    yaml.safe_dump(cfg, f, allow_unicode=True, sort_keys=False)
+PY
+  python scripts/run_adaptive_sim.py --config "outputs/configs/$s.yaml"
+done
+```
+
+`configs/config.yaml` を雛形として `strategy` と `results.filename_suffix` のみを書き換えた設定を
+`outputs/configs/` に生成するため、CV分割・モデル・閾値・乱数シードは全戦略で揃います。
+結果は `results.filename_suffix` により戦略ごとに分かれて `outputs/results/` 以下に保存されます。
 
 ## テスト
 本リポジトリでは、主要コンポーネントのユニットテストと、サンプルデータを用いた統合テストを提供します。

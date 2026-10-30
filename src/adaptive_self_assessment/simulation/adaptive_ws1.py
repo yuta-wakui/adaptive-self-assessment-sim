@@ -18,7 +18,13 @@ import time
 from typing import List, Dict, Any, Tuple
 
 from adaptive_self_assessment.components.rng import make_selector_seed
-from adaptive_self_assessment.components.selector import QuestionSelector, compute_importance_order, FIXED_STRATEGIES
+from adaptive_self_assessment.components.selector import (
+    QuestionSelector,
+    compute_importance_order,
+    compute_redundancy_matrix,
+    FIXED_STRATEGIES,
+    ADAPTIVE_STRATEGIES,
+)
 from adaptive_self_assessment.components.model_store import ModelStore
 from adaptive_self_assessment.components.predictor import predict_item_ws1, predict_overall_ws1
 
@@ -86,14 +92,22 @@ def run_ws1_simulation(
     cv_seed = int(app.cv.random_seed)
     selector_strategy = app.selector.strategy
 
-    # compute the fixed question order once per fold from the training data
+    # scored once per fold from the training data only: a fixed question order for the
+    # fixed-order strategies, or the inter-item mutual information matrix that the adaptive
+    # strategies re-score from at every step
     importance_order = None
+    redundancy = None
     if selector_strategy in FIXED_STRATEGIES:
         importance_order = compute_importance_order(
             df_train=train_df,
             item_cols=ca_cols,
             target_col=ra_col,
             strategy=selector_strategy,
+        )
+    elif selector_strategy in ADAPTIVE_STRATEGIES:
+        redundancy = compute_redundancy_matrix(
+            df_train=train_df,
+            item_cols=ca_cols,
         )
 
     # run simulation for each user in test set
@@ -114,13 +128,16 @@ def run_ws1_simulation(
             strategy=selector_strategy,
             seed=seed,
             importance_order=importance_order,
+            redundancy=redundancy,
         )
 
         start_time = time.time()  
 
         # repeat until all items are answered or complemented
         while C:
-            ci = selector.select(C) # select next question
+            # A is the answered/complemented set: only its membership reaches the
+            # selector, never the respondent's answer values
+            ci = selector.select(C, A=list(Ca.keys())) # select next question
 
             # ask user and get actual answer
             answer = int(user[ci]) # use actual answer from test_df

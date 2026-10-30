@@ -74,7 +74,7 @@ cv:
 # 質問項目の選択方法
 # --------------------
 question_selection:
-  strategy: "random" # 選択戦略: "random" / "MaxRev" / "mrmr"
+  strategy: "random" # 選択戦略: "random" / "rubric_based_maxrev" / "rubric_based_mrmr" / "inter_item_relevance_all" / "inter_item_relevance_unanswered" / "inter_item_mrmr_unanswered"
 
 # --------------------
 # 出力設定
