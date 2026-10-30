@@ -129,7 +129,7 @@ cv:
 # Question selection method
 # --------------------
 question_selection:
-  strategy: "inter_item_relevance_all" # 選択戦略: "random" / "rubric_based_maxrev" / "rubric_based_mrmr" / "inter_item_relevance_all" / "inter_item_relevance_unanswered" / "inter_item_mrmr_unanswered"
+  strategy: "random" # 選択戦略: "random" / "rubric_based_maxrev" / "rubric_based_mrmr" / "inter_item_relevance_all" / "inter_item_relevance_unanswered" / "inter_item_mrmr_unanswered"
 
 # --------------------
 # Output settings

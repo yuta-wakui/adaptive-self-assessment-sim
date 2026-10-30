@@ -200,8 +200,6 @@ $F$ は全チェック項目、$A$ は回答済み（信頼度閾値以上で補
 | `inter_item_relevance_unanswered` | Inter-Item Relevance (Unanswered) | $\frac{1}{\vert U\vert-1}\sum_{Q_j\in U\setminus\{Q_i\}}I(Q_i;Q_j)$ | 未回答集合 $U$ に適応 |
 | `inter_item_mrmr_unanswered` | Inter-Item mRMR (Unanswered) | 上式 $-\frac{1}{\vert A\vert}\sum_{Q_j\in A}I(Q_i;Q_j)$ | 集合 $A,U$ に適応 |
 
-定義式・境界条件・各戦略の意図は [docs/adaptive_self_assessment_overview.md](docs/adaptive_self_assessment_overview.md#質問選択戦略) を参照してください。
-
 ### 戦略を変えて比較する
 `strategy` 以外の設定（CV分割、モデル、閾値、乱数シード）を揃えたまま、戦略ごとに実行します。
 
